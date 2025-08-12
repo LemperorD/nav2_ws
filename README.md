@@ -1,4 +1,4 @@
-# 北极熊导航包快速开始
+# 北极熊导航Quick-Start
 
 ## 0. 前言
 
@@ -78,6 +78,8 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
 ```
 
+此处记得**点击gazebo界面中左下角的启动键**，不然将无法发布机器人内部各个零件间的tf变换。
+
 ### terminal 2
 
 #### 导航模式
@@ -94,3 +96,5 @@ slam:=False
 ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
 slam:=True
 ```
+
+具体的更改地图、调参等功能请移步``tutorial.md``查看。
