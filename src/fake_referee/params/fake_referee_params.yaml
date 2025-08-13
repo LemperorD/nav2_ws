@@ -1,0 +1,80 @@
+fake_referee_node:
+  ros__parameters:
+
+    buff:
+      recovery_buff: 10
+      cooling_buff: 5
+      defence_buff: 50
+      vulnerability_buff: 30
+      attack_buff: 50
+      remaining_energy: 0x32
+
+    event_data:
+      non_overlapping_supply_zone: 1
+      overlapping_supply_zone: 0
+      supply_zone: 1
+      small_energy: 1
+      big_energy: 0
+      central_highland: 1
+      trapezoidal_highland: 2
+      center_gain_zone: 3
+
+    game_robot_hp:
+      red_1_robot_hp: 200
+      red_2_robot_hp: 200
+      red_3_robot_hp: 150
+      red_4_robot_hp: 150
+      red_7_robot_hp: 300
+      red_outpost_hp: 1000
+      red_base_hp: 2000
+      blue_1_robot_hp: 200
+      blue_2_robot_hp: 200
+      blue_3_robot_hp: 150
+      blue_4_robot_hp: 150
+      blue_7_robot_hp: 300
+      blue_outpost_hp: 1000
+      blue_base_hp: 2000
+
+    game_status:
+      game_progress: 4
+      stage_remain_time: 300
+
+    ground_robot_position:
+      hero_x: 0.0
+      hero_y: 0.0
+      hero_z: 0.0
+      engineer_x: 1.0
+      engineer_y: 0.0
+      engineer_z: 0.0
+      standard3_x: 2.0
+      standard3_y: 0.0
+      standard3_z: 0.0
+      standard4_x: 3.0
+      standard4_y: 0.0
+      standard4_z: 0.0
+
+    rfid_status:
+      base_gain_point: false
+      central_highland_gain_point: false
+      enemy_central_highland_gain_point: false
+      friendly_trapezoidal_highland_gain_point: false
+      enemy_trapezoidal_highland_gain_point: false
+      friendly_fly_ramp_front_gain_point: false
+      friendly_fly_ramp_back_gain_point: false
+      enemy_fly_ramp_front_gain_point: false
+      enemy_fly_ramp_back_gain_point: false
+      friendly_central_highland_lower_gain_point: false
+      friendly_central_highland_upper_gain_point: false
+      enemy_central_highland_lower_gain_point: false
+      enemy_central_highland_upper_gain_point: false
+      friendly_highway_lower_gain_point: false
+      friendly_highway_upper_gain_point: false
+      enemy_highway_lower_gain_point: false
+      enemy_highway_upper_gain_point: false
+      friendly_fortress_gain_point: false
+      friendly_outpost_gain_point: false
+      friendly_supply_zone_non_exchange: false
+      friendly_supply_zone_exchange: false
+      friendly_big_resource_island: false
+      enemy_big_resource_island: false
+      center_gain_point: false
