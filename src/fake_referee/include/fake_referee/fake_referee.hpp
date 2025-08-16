@@ -1,8 +1,14 @@
 #ifndef FAKE_REFEREE_HPP_
 #define FAKE_REFEREE_HPP_
 
+#include <string>
+#include <vector>
+#include <tuple>
+#include <optional>
+
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/point.hpp"
+#include "std_msgs/msg/string.hpp"
 
 #include "pb_rm_interfaces/msg/buff.hpp"
 #include "pb_rm_interfaces/msg/event_data.hpp"
@@ -10,6 +16,9 @@
 #include "pb_rm_interfaces/msg/game_status.hpp"
 #include "pb_rm_interfaces/msg/ground_robot_position.hpp"
 #include "pb_rm_interfaces/msg/rfid_status.hpp"
+#include "pb_rm_interfaces/msg/robot_status.hpp"
+
+#include "rmoss_interfaces/msg/robot_status.hpp"
 
 namespace fake_referee
 {
@@ -34,6 +43,15 @@ typedef enum{
     NOT_DETECTED = 0,              // RFID card not detected
     DETECTED = 1,                  // RFID card detected
 } RfidStatus;
+
+typedef enum{
+    ARMOR_HIT = 0                     ,//装甲模块被弹丸攻击导致扣血
+    SYSTEM_OFFLINE = 1                ,//裁判系统重要模块离线导致扣血
+    OVER_SHOOT_SPEED = 2              ,//射击初速度超限导致扣血
+    OVER_HEAT = 3                     ,//枪口热量超限导致扣血
+    OVER_POWER = 4                    ,//底盘功率超限导致扣血
+    ARMOR_COLLISION = 5               ,//装甲模块受到撞击导致扣血
+}hp_deduction_reason;
 //-------------------------详见裁判系统串口协议 V1.7.0及以上版本-------------------------
 
 //--------------------------------用于保存参数的结构体---------------------------------
@@ -117,6 +135,43 @@ struct RfidStatusConfig {
     bool enemy_big_resource_island                      ;//对方大资源岛增益点
     bool center_gain_point                              ;//中心增益点（仅 RMUL 适用）
 };//0x0209
+
+struct PB_robot_status{
+    //机器人性能体系数据 (裁判系统串口协议 V1.7.0 0x0201)
+    uint8_t robot_id                        ;//本机器人 ID
+    uint8_t robot_level                     ;//机器人等级
+    uint16_t current_hp                       ;//机器人当前血量
+    uint16_t maximum_hp                       ;//机器人血量上限
+    uint16_t shooter_barrel_cooling_value     ;//机器人枪口热量每秒冷却值
+    uint16_t shooter_barrel_heat_limit        ;//机器人枪口热量上限
+    
+    //实时底盘缓冲能量和射击热量数 (裁判系统串口协议 V1.7.0 0x0202)
+    uint16_t shooter_17mm_1_barrel_heat       ;//第 1 个 17mm 发射机构的枪口热量
+    
+    //伤害状态数据 (裁判系统串口协议 V1.7.0 0x0206)
+    //const for hp_deduction_reason
+    // uint8_t ARMOR_HIT = 0                     //装甲模块被弹丸攻击导致扣血
+    // uint8_t SYSTEM_OFFLINE = 1                //裁判系统重要模块离线导致扣血
+    // uint8_t OVER_SHOOT_SPEED = 2              //射击初速度超限导致扣血
+    // uint8_t OVER_HEAT = 3                     //枪口热量超限导致扣血
+    // uint8_t OVER_POWER = 4                    //底盘功率超限导致扣血
+    // uint8_t ARMOR_COLLISION = 5               //装甲模块受到撞击导致扣血
+    
+    uint8_t armor_id;                          //当扣血原因为装甲模块被弹丸攻击、受撞击、离线或测速模块离线时，
+                                               //数值为装甲模块或测速模块的 ID 编号；当其他原因导致扣血时，该数值为 0
+    uint8_t hp_deduction_reason;               //血量变化类型
+    
+    //允许发弹量 (裁判系统串口协议 V1.7.0 0x0208)
+    uint16_t projectile_allowance_17mm;        //17mm 弹丸剩余发射次数
+
+    //本机机器人位置数据 (裁判系统串口协议 V1.7.0 0x0203) //挪到下面方便字对齐
+    std::array<double,3> translation;
+    std::array<double,4> rotation;
+
+    uint16_t remaining_gold_coin;              //剩余金币数量
+    
+    bool is_hp_deduced;                      //血量是否下降（上位机二次处理）
+};
 //----------------------------------------------------------------------------------
 
 class FakeRefereeNode : public rclcpp::Node
@@ -143,6 +198,17 @@ private:
     void PublishRfidStatus();
     //发出“referee/rfid_status”,针对个体
 
+    void PublishRobotStatus();
+    //发出“referee/robot_status”,针对个体
+
+    void SubRobotStatus(const rmoss_interfaces::msg::RobotStatus::SharedPtr msg);
+    //订阅器回调函数，接收并准备重新发出机器人状态话题
+
+    void SubAttackInfo(const std_msgs::msg::String::SharedPtr msg);
+    //订阅器回调函数，接收attack_info字符串
+
+    std::vector<std::string> split(const std::string &str, char delim);
+
     // 参数声明 + 更新
     void declareAndInitParams();
     void updateParams();
@@ -154,6 +220,11 @@ private:
     rclcpp::Publisher<pb_rm_interfaces::msg::GameStatus>::SharedPtr game_status_pub_;
     rclcpp::Publisher<pb_rm_interfaces::msg::GroundRobotPosition>::SharedPtr ground_robot_position_pub_;
     rclcpp::Publisher<pb_rm_interfaces::msg::RfidStatus>::SharedPtr rfid_status_pub_;
+    rclcpp::Publisher<pb_rm_interfaces::msg::RobotStatus>::SharedPtr robot_status_pub_;
+
+    //订阅器
+    rclcpp::Subscription<rmoss_interfaces::msg::RobotStatus>::SharedPtr robot_status_sub_;
+    rclcpp::Subscription<std_msgs::msg::String>::SharedPtr attack_info_sub_;
 
     // 定时器
     rclcpp::TimerBase::SharedPtr timer_;
@@ -165,6 +236,7 @@ private:
     GameStatusConfig game_status_cfg_;
     GroundRobotPositionConfig ground_robot_position_cfg_;
     RfidStatusConfig rfid_status_cfg_;
+    PB_robot_status rst_pb;
 
     // 参数回调句柄
     OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
