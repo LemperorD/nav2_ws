@@ -1,5 +1,10 @@
 # 北极熊导航Quick-Start
 
+![图 0](images/transistor_code.png)
+本仓库为北航Transistor战队2026赛季哨兵机器人的工作空间，参考了深北莫北极熊战队开源的导航功能包，丰富了假裁判系统等功能，同时做了一些修改。
+
+本文档旨在帮助导航小白快速上手北极熊导航功能包。
+
 ## 0. 前言
 
 - Ubuntu 22.04
@@ -10,6 +15,8 @@
 ```bash
 mkdir -p ~/nav2_ws && cd ~/nav2_ws
 ```
+
+**2025.8.18更新：可以使用Tutorial中的一口气全克隆将所有环境装好，但环境可能并不完整，建议去一口气全克隆中提供的北极熊官方链接。**
 
 ## 1. 安装
 
@@ -29,6 +36,8 @@ git clone --recursive https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_sen
 
 ```bash
 sudo pip install vcstool2
+```
+```bash
 pip install xmacro
 ```
 
@@ -36,6 +45,8 @@ pip install xmacro
 
 ```bash
 git clone https://github.com/SMBU-PolarBear-Robotics-Team/rmu_gazebo_simulator.git src/rmu_gazebo_simulator
+```
+```bash
 vcs import src < src/rmu_gazebo_simulator/dependencies.repos
 ```
 
@@ -53,10 +64,20 @@ vcs import src < src/rmu_gazebo_simulator/dependencies.repos
 
 ```bash
 mkdir -p ~/tools && cd ~/tools
+```
+```bash
 sudo apt install -y libeigen3-dev libomp-dev
+```
+```bash
 git clone https://github.com/koide3/small_gicp.git
+```
+```bash
 cd small_gicp
+```
+```bash
 mkdir build && cd build
+```
+```bash
 cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 sudo make install
 ```
@@ -65,8 +86,14 @@ sudo make install
 
 ```bash
 cd ~/nav2_ws
-rosdep init 
+```
+```bash
+rosdep init # 如果初始化过rosdep请忽略这一步
+```
+```bash
 rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
+```
+```bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
@@ -88,6 +115,7 @@ ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
 ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
 world:=rmul_2025 \
 slam:=False
+#注：上述命令使用了联盟赛的3v3地图，方便后续行为树决策部分使用
 ```
 
 #### 建图模式
