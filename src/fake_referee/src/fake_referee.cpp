@@ -426,7 +426,7 @@ void FakeRefereeNode::PublishRobotStatus()
     msg.robot_pos.position.x = rst_pb.translation[0];
     msg.robot_pos.position.y = rst_pb.translation[1];
     msg.robot_pos.position.z = rst_pb.translation[2];
-    RCLCPP_INFO(get_logger(),"pub translation:%f, %f, %f",msg.robot_pos.position.x, msg.robot_pos.position.y, msg.robot_pos.position.z);
+    // RCLCPP_INFO(get_logger(),"pub translation:%f, %f, %f",msg.robot_pos.position.x, msg.robot_pos.position.y, msg.robot_pos.position.z);
     msg.robot_pos.orientation.x = rst_pb.rotation[0];
     msg.robot_pos.orientation.y = rst_pb.rotation[1];
     msg.robot_pos.orientation.z = rst_pb.rotation[2];
@@ -439,13 +439,13 @@ void FakeRefereeNode::PublishRobotStatus()
 
 void FakeRefereeNode::SubRobotStatus(const rmoss_interfaces::msg::RobotStatus::SharedPtr msg)
 {
-    RCLCPP_INFO(get_logger(),"get translation:%f, %f, %f", msg->gt_tf.translation.x, msg->gt_tf.translation.y, msg->gt_tf.translation.z);
+    // RCLCPP_INFO(get_logger(),"get translation:%f, %f, %f", msg->gt_tf.translation.x, msg->gt_tf.translation.y, msg->gt_tf.translation.z);
     rst_pb.robot_id = msg->id;
     rst_pb.robot_level = msg->level;
     rst_pb.current_hp = msg->remain_hp;
     rst_pb.maximum_hp = msg->max_hp;
     rst_pb.translation = {msg->gt_tf.translation.x, msg->gt_tf.translation.y, msg->gt_tf.translation.z};
-    RCLCPP_INFO(get_logger(),"set translation:%f, %f, %f", rst_pb.translation[0], rst_pb.translation[1], rst_pb.translation[2]);
+    // RCLCPP_INFO(get_logger(),"set translation:%f, %f, %f", rst_pb.translation[0], rst_pb.translation[1], rst_pb.translation[2]);
     rst_pb.rotation = {msg->gt_tf.rotation.x, msg->gt_tf.rotation.y, msg->gt_tf.rotation.z, msg->gt_tf.rotation.w};
 }
 
