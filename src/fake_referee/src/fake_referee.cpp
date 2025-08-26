@@ -434,6 +434,7 @@ void FakeRefereeNode::PublishRobotStatus()
     msg.armor_id = rst_pb.armor_id;
     msg.hp_deduction_reason = rst_pb.hp_deduction_reason;
     msg.is_hp_deduced = rst_pb.is_hp_deduced;
+    msg.projectile_allowance_17mm = rst_pb.projectile_allowance_17mm;
     robot_status_pub_->publish(msg);
 }
 
