@@ -1,0 +1,3 @@
+[submodule "src/BHrobot2025_sentry_behavior"]
+	path = src/BHrobot2025_sentry_behavior
+	url = https://github.com/LemperorD/BHrobot2025_sentry_behavior.git
