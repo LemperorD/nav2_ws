@@ -1,3 +1,9 @@
+[submodule "src/pb2025_sentry_nav"]
+	path = src/pb2025_sentry_nav
+	url = https://github.com/LemperorD/pb2025_sentry_nav.git
 [submodule "src/pb2025_sentry_behavior"]
 	path = src/pb2025_sentry_behavior
 	url = https://github.com/LemperorD/pb2025_sentry_behavior.git
+[submodule "src/rmu_gazebo_simulator"]
+	path = src/rmu_gazebo_simulator
+	url = https://github.com/LemperorD/rmu_gazebo_simulator.git
