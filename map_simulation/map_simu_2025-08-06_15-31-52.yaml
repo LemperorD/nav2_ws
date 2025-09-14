@@ -1,0 +1,7 @@
+image: map_simu_2025-08-06_15-31-52.pgm
+mode: trinary
+resolution: 0.05
+origin: [-1.27, -7.55, 0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
