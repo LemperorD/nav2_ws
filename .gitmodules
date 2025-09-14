@@ -7,3 +7,18 @@
 [submodule "src/rmu_gazebo_simulator"]
 	path = src/rmu_gazebo_simulator
 	url = https://github.com/LemperorD/rmu_gazebo_simulator.git
+[submodule "src/pb2025_robot_description"]
+	path = src/pb2025_robot_description
+	url = https://github.com/LemperorD/pb2025_robot_description.git
+[submodule "src/auto_aim_interfaces"]
+	path = src/auto_aim_interfaces
+	url = https://github.com/LemperorD/auto_aim_interfaces.git
+[submodule "src/hik_camera_ros2_driver"]
+	path = src/hik_camera_ros2_driver
+	url = https://github.com/LemperorD/hik_camera_ros2_driver.git
+[submodule "src/pb2025_rm_vision"]
+	path = src/pb2025_rm_vision
+	url = https://github.com/LemperorD/pb2025_rm_vision.git
+[submodule "src/pb_rm_interfaces"]
+	path = src/pb_rm_interfaces
+	url = https://github.com/LemperorD/pb_rm_interfaces.git
