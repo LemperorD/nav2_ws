@@ -3,3 +3,21 @@ build/
 install/
 
 log/
+
+.vscode/
+
+src/.vscode/
+
+src/rmoss_core/
+
+src/rmoss_gazebo/
+
+src/rmoss_gz_resource/
+
+src/rmoss_interaces/
+
+src/sdformat_tools/
+
+src/BehaviorTree.ROS2/
+
+src/joint_state_publisher/
