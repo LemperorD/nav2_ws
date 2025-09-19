@@ -12,9 +12,9 @@ src/rmoss_core/
 
 src/rmoss_gazebo/
 
-src/rmoss_gz_resource/
+src/rmoss_gz_resources/
 
-src/rmoss_interaces/
+src/rmoss_interfaces/
 
 src/sdformat_tools/
 
