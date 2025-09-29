@@ -1,6 +1,8 @@
 # 北极熊导航Tutorial
 
-![all text](images/transistor_code.png)
+<div style="text-align: center;">
+  <img src="images/transistor_code.png" width="400" height="400">
+</div>
 
 本教程旨在让**已经实践过Quick-Start流程**的同学学会如何调参，同时通过北极熊开源的导航功能包更加深入地理解建图、定位、导航、决策的原理和四者密不可分的关系。
 
