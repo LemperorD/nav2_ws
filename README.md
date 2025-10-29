@@ -76,7 +76,24 @@ cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 sudo make install
 ```
 
-## 5. 编译
+## 5. Kiss_MATCHER第三方库系统安装
+
+``buaa_sentry_relocalization``功能包的粗配准部分以及``kiss_matcher_relocalization``功能包依赖于``Kiss_MATCHER``这一第三方库进行开发。
+
+```bash
+mkdir -p ~/tools && cd ~/tools
+```
+```bash
+git clone https://github.com/MIT-SPARK/KISS-Matcher.git
+```
+```bash
+cd KISS-Matcher
+```
+```bash
+make deps & make cppinstall
+```
+
+## 6. 编译
 
 上述步骤已经将所需的都安装好了，可以开始编译了。
 
