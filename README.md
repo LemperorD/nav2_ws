@@ -76,9 +76,9 @@ cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 sudo make install
 ```
 
-## 5. Kiss_MATCHER第三方库系统安装
+## 5. KISS_MatcherR第三方库系统安装
 
-``buaa_sentry_relocalization``功能包的粗配准部分以及``kiss_matcher_relocalization``功能包依赖于``Kiss_MATCHER``这一第三方库进行开发。
+``buaa_sentry_relocalization``功能包的粗配准部分以及``kiss_matcher_relocalization``功能包依赖于``KISS_Matcher``这一第三方库进行开发。
 
 ```bash
 mkdir -p ~/tools && cd ~/tools
@@ -110,7 +110,7 @@ rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-## 6. 运行
+## 7. 运行
 
 先在工作空间根目录下source环境变量。
 ```bash
