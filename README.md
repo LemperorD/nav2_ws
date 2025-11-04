@@ -89,11 +89,46 @@ git clone https://github.com/MIT-SPARK/KISS-Matcher.git
 ```bash
 cd KISS-Matcher
 ```
+
+修改Makefile中的cppinstall和cppinstall_matcher_only为如下所示（添加两行）
+```
+cppinstall: deps
+	@mkdir -p cpp/kiss_matcher/build
+	@cmake -Bcpp/kiss_matcher/build cpp/kiss_matcher -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_CXX_FLAGS="-fPIC"
+	@cmake --build cpp/kiss_matcher/build -j$(nproc --all)
+	@$(SUDO) cmake --install cpp/kiss_matcher/build
+	@$(SUDO) cmake --install cpp/kiss_matcher/build/_deps/robin-build
+
+cppinstall_matcher_only:
+	@mkdir -p cpp/kiss_matcher/build
+	@cmake -Bcpp/kiss_matcher/build cpp/kiss_matcher -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_CXX_FLAGS="-fPIC"
+	@cmake --build cpp/kiss_matcher/build -j$(nproc --all)
+	@$(SUDO) cmake --install cpp/kiss_matcher/build
+```
+
 ```bash
 make deps & make cppinstall
 ```
 
-## 6. 编译
+## 6. TEASER-plusplus第三方库系统安装
+
+```bash
+sudo apt install cmake libeigen3-dev libboost-all-dev
+mkdir -p ~/tools && cd ~/tools
+git clone https://github.com/MIT-SPARK/TEASER-plusplus.git
+cd TEASER-plusplus && mkdir build && cd build
+cmake .. && make
+sudo make install
+sudo ldconfig
+```
+
+## 7. 编译
+
+如果安装了MVS，请在**编译**和**运行导航**前运行
+
+```bash
+export LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib
+```
 
 上述步骤已经将所需的都安装好了，可以开始编译了。
 
@@ -107,10 +142,10 @@ rosdep init # 如果初始化过rosdep请忽略这一步
 rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 ```
 ```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel 2
 ```
 
-## 7. 运行
+## 8. 运行
 
 先在工作空间根目录下source环境变量。
 ```bash
@@ -127,9 +162,19 @@ ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
 
 ### terminal 2
 
+如果rviz出现闪烁问题，可以尝试先设置环境变量
+```bash
+export QT_SCREEN_SCALE_FACTORS=1
+```
+或
+```bash
+export QT_ENABLE_HIGHDPI_SCALING=0
+```
+
 #### 导航模式
 
 ```bash
+source ./install/setup.bash
 ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
 world:=rmul_2025 \
 slam:=False
@@ -139,8 +184,22 @@ slam:=False
 #### 建图模式
 
 ```bash
+source ./install/setup.bash
 ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
 slam:=True
 ```
 
 具体的更改地图、调参等功能请移步``tutorial.md``查看。
+
+## 9. 假裁判系统及操作手客户端
+
+假裁判系统及操作手客户端需安装如下python第三方库
+```bash
+pip install engineio
+pip install Flask
+pip install flask-cors
+pip install flask-socketio
+```
+使用``local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
+
+使用``local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
