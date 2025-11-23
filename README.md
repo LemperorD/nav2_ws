@@ -76,7 +76,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 sudo make install
 ```
 
-## 5. KISS_MatcherR第三方库系统安装
+## 5. KISS_Matcher第三方库系统安装
 
 ``buaa_sentry_relocalization``功能包的粗配准部分以及``kiss_matcher_relocalization``功能包依赖于``KISS_Matcher``这一第三方库进行开发。
 
