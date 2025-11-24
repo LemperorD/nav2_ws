@@ -194,4 +194,35 @@ point_lio:
 
 本章为实车调参教程，记录实车调参的过程、问题与解决问题的方法。
 
+可以搭配[北极熊导航官方wiki](https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_sentry_nav/wiki)，食用效果更佳
+
 ### 2.1 前言——参数位置
+
+#### 2.1.1 全局参数
+
+全局参数指在使用``pb2025_nav_bringup``功能包中的launch文件时使用的参数，位于``pb2025_nav_bringup``功能包中的``config/reality/nav2_params.yaml``。
+
+#### 2.1.2 局部参数
+
+局部参数指在调整功能包的过程中使用针对每个功能包的launch文件时用到的参数，位于每个功能包内部。
+
+***调试实车时先进行逐个功能包的测试，一步一步调整局部参数，再将局部参数合并到全局参数中跑整个建图/导航的全流程。***
+
+#### 2.1.3 机器人TF
+
+机器人TF``pb2025_robot_description``功能包发布，26赛季主要在该功能包中的``resource/xmacro/buaa2026_sentry_robot.sdf.xmacro``中维护该TF.下面对导航较为关心的部分TF进行解析。
+
+##### 2.1.3.1 激光雷达
+
+- ``parent``：指激光雷达固连的坐标系，26赛季固连在底盘上（即``chassis``坐标系）
+- ``pose``：由六个数字组成，依次为 ``x, y, z, roll, pitch, yaw``，通过空格分隔，表示传感器相对于``parent``坐标系的变换。单位与方向需遵循[REP-0103](https://www.ros.org/reps/rep-0103.html)标准。
+
+##### 2.1.3.2 chassis_height
+
+底盘高度，指``base_footprint``与``chassis``两个坐标系的z方向差异，父坐标系为``base_footprint``。可以在``rmoss_gz_resources``功能包中的``resource/models/rm25_example_robot/rm25_example_robot.def.xmacro``找到其根源。
+
+***rmoss默认``base_footprint``与``chassis``两个坐标系只有z的差异，可以在``rmoss_gz_resources``功能包中的``resource/models/rm25_example_robot/rm25_example_robot.def.xmacro``中修改***
+
+### 2.2 雷达ip配置
+
+### 2.3 pointlio参数
