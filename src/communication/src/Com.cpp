@@ -283,3 +283,14 @@ void SerialCommunicationClass::timerThread() {
     std::this_thread::sleep_until(start + std::chrono::microseconds(1000)); // ~1ms
   }
 }
+
+void SerialCommunicationClass::writeFloatLE(uint8_t *dst, float value)
+{
+  uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(float));
+
+  dst[0] = static_cast<uint8_t>(bits & 0xFFu);
+  dst[1] = static_cast<uint8_t>((bits >> 8) & 0xFFu);
+  dst[2] = static_cast<uint8_t>((bits >> 16) & 0xFFu);
+  dst[3] = static_cast<uint8_t>((bits >> 24) & 0xFFu);
+}

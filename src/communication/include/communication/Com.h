@@ -28,6 +28,8 @@ public:
   explicit SerialCommunicationClass(rclcpp::Node* node);
   ~SerialCommunicationClass();
 
+  void writeFloatLE(uint8_t *dst, float value);
+
   // 发送一帧 25 字节数组（PC->电控）
   bool sendArray25(const std::array<uint8_t,25>& payload);
 
