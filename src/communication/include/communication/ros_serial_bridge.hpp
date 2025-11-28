@@ -4,11 +4,11 @@
 #include <rclcpp/rclcpp.hpp>
 #include <functional>
 
-template<typename RosMsgT, typename PayloadT>
+template<typename RosMsgT>
 class RosSerialBridge {
 public:
-  using EncoderFunc = std::function<PayloadT(const RosMsgT&)>;
-  using DecoderFunc = std::function<RosMsgT(const PayloadT&)>;
+  using EncoderFunc = std::function<const uint8_t*(const RosMsgT&)>;
+  using DecoderFunc = std::function<RosMsgT(const uint8_t*)>;
 
   RosSerialBridge(
       rclcpp::Node* node,
@@ -16,8 +16,8 @@ public:
       bool ros_to_serial,// true: ROS → 电控, 反之为false
       EncoderFunc encoder,
       DecoderFunc decoder,
-      std::function<void(const PayloadT&)> serial_sender,
-      std::function<const PayloadT&(void)> serial_receiver)
+      std::function<void(const uint8_t*, size_t)> serial_sender,
+      std::function<const uint8_t*(void)> serial_receiver)
       : node_(node),
         encoder_(encoder),
         decoder_(decoder),
@@ -30,8 +30,8 @@ public:
       sub_ = node_->create_subscription<RosMsgT>(
         ros_topic_name, qos,
         [this](const typename RosMsgT::SharedPtr msg){
-          PayloadT payload = encoder_(*msg);
-          serial_sender_(payload);
+          const uint8_t* payload = encoder_(*msg);
+          serial_sender_(payload, sizeof(payload));
         });
     }
 
@@ -47,8 +47,8 @@ private:
   rclcpp::Node* node_;
   EncoderFunc encoder_;
   DecoderFunc decoder_;
-  std::function<void(const PayloadT&)> serial_sender_;
-  std::function<const PayloadT&(void)> serial_receiver_;
+  std::function<void(const uint8_t*, size_t)> serial_sender_;
+  std::function<const uint8_t*(void)> serial_receiver_;
   typename rclcpp::Publisher<RosMsgT>::SharedPtr pub_;
   typename rclcpp::Subscription<RosMsgT>::SharedPtr sub_;
 };

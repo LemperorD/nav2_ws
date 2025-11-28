@@ -8,8 +8,6 @@
 #include "communication/ros_serial_bridge.hpp"
 #include "communication/Com.h"
 
-using Array25 = std::array<uint8_t,25>;
-
 namespace bridge
 {
 
@@ -26,13 +24,13 @@ public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
 
 private:
-  Array25 encodeTwist(const geometry_msgs::msg::Twist& msg);
-  std_msgs::msg::Float64 decodeYaw(const Array25& payload);
+  uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
+  std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
 
 private:
   std::shared_ptr<SerialCommunicationClass> com_;
-  std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist, Array25>> bridge_twist_pc_;
-  std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64, Array25>> bridge_Yaw_mcu_;
+  std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
+  std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64>> bridge_Yaw_mcu_;
 };
 
 }  // namespace bridge

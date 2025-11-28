@@ -11,38 +11,38 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   com_ = std::make_shared<SerialCommunicationClass>(this);
 
   bridge_twist_pc_ = std::make_shared<RosSerialBridge
-    <geometry_msgs::msg::Twist, Array25>>(
+    <geometry_msgs::msg::Twist>>(
       this, "/cmd_vel", true,
       std::bind(&BridgeNode::encodeTwist, this, std::placeholders::_1),
       nullptr,
-      std::bind(&SerialCommunicationClass::sendArray25, com_.get(), std::placeholders::_1),
+      std::bind(&SerialCommunicationClass::sendDataFrame, com_.get(), std::placeholders::_1, std::placeholders::_2),
       nullptr
     );
 
   bridge_Yaw_mcu_ = std::make_shared<RosSerialBridge
-    <std_msgs::msg::Float64, Array25>>(
+    <std_msgs::msg::Float64>>(
       this, "/serial/Yaw", false,
       nullptr,
       std::bind(&BridgeNode::decodeYaw, this, std::placeholders::_1),
       nullptr,
-      std::bind(&SerialCommunicationClass::receiveArray25, com_.get())
+      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get())
     );
 }
 
-Array25 BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
+uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
   float vx = static_cast<float>(msg.linear.x);
   float vy = static_cast<float>(msg.linear.y);
   float wz = static_cast<float>(msg.angular.z);
 
-  Array25 payload{};
+  uint8_t* payload{};
   com_->writeFloatLE(&payload[0], vx);
   com_->writeFloatLE(&payload[4], vy);
   com_->writeFloatLE(&payload[8], wz);
   return payload;
 }
 
-std_msgs::msg::Float64 BridgeNode::decodeYaw(const Array25& payload)
+std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
   msg.data = static_cast<double>(com_->readFloatLE(&payload[0]));

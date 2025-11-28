@@ -5,6 +5,8 @@
 #include <string>
 #include <thread>
 
+using Array25 = std::array<uint8_t, 25>;
+
 // ================= BR 串口协议常量 =================
 // SOF = 'B' 'R'  (0x42 0x52)
 static constexpr uint8_t FRAME_HEADER1 = 0x42;
@@ -16,33 +18,21 @@ static constexpr uint8_t COMMAND_CODE_ARRAY25 = 0xE1;
 // 缓冲与帧尺寸（最小帧 = 2B SOF + 1B CMD + 1B LEN + 1B CRC8 = 5）
 static constexpr size_t BUFFER_SIZE    = 256;
 static constexpr size_t FRAME_MIN_SIZE = 5;
-static constexpr size_t MAX_FRAME_LEN  = 128;  // 防御性限制
+static constexpr size_t MAX_FRAME_LEN  = 128;
+static constexpr size_t MAX_FRAMES_PER_LOOP = 10; // 避免长时间占用：一次最多处理10帧
 
 class SerialCommunicationClass {
 public:
-  // 接收回调：把收到的 25 字节数组交给上层
-  using Array25Callback = std::function<void(const std::array<uint8_t,25>&)>;
-  // 原始帧回调：把任意 CMD/LEN 的负载直接上抛（抓包/调试用）
-  using RawFrameCallback = std::function<void(uint8_t /*cmd*/, const uint8_t* /*payload*/, uint8_t /*len*/)>;
-
-  explicit SerialCommunicationClass(rclcpp::Node* node);
+  explicit SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port = "");
   ~SerialCommunicationClass();
 
   void writeFloatLE(uint8_t *dst, float value);
   float readFloatLE(const uint8_t *src);
 
-  bool sendArray25(const std::array<uint8_t,25>& payload);
-  std::array<uint8_t,25> receiveArray25();
-
-  // 设置接收回调（电控->PC）
-  void setArray25Callback(Array25Callback cb) { array25_callback_ = std::move(cb); }
-  void setRawFrameCallback(RawFrameCallback cb) { raw_callback_ = std::move(cb); }
+  void sendDataFrame(const uint8_t* data, size_t len);
+  uint8_t* receiveDataFrame();
 
 private:
-  // 串口初始化/找口
-  void initializeSerial();
-  std::string findAvailableSerialPort();
-
   // 轮询线程（~1ms）
   void timerThread();
   void timerCallback();
@@ -55,14 +45,15 @@ private:
   static uint8_t crc8_calc(const uint8_t* p, size_t len);
 
 private:
+  void openSerialPort(const std::string& port_name);
+  std::string findSerialPort();
+  void configureSerialPort();
+
   rclcpp::Node* node_{nullptr};
   int fd_ = -1;
   bool running_ = false;
   std::thread timer_thread_;
-
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
-
-  Array25Callback array25_callback_{};
-  RawFrameCallback raw_callback_{};
+  std::vector<uint8_t> frame_buffer_{};
 };
