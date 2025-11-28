@@ -31,8 +31,8 @@ public:
   void writeFloatLE(uint8_t *dst, float value);
   float readFloatLE(const uint8_t *src);
 
-  // 发送一帧 25 字节数组（PC->电控）
   bool sendArray25(const std::array<uint8_t,25>& payload);
+  std::array<uint8_t,25> receiveArray25();
 
   // 设置接收回调（电控->PC）
   void setArray25Callback(Array25Callback cb) { array25_callback_ = std::move(cb); }

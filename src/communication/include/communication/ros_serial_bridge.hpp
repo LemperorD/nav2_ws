@@ -16,11 +16,13 @@ public:
       bool ros_to_serial,// true: ROS → 电控, 反之为false
       EncoderFunc encoder,
       DecoderFunc decoder,
-      std::function<void(const PayloadT&)> serial_sender)
+      std::function<void(const PayloadT&)> serial_sender,
+      std::function<const PayloadT&(void)> serial_receiver)
       : node_(node),
         encoder_(encoder),
         decoder_(decoder),
-        serial_sender_(serial_sender)
+        serial_sender_(serial_sender),
+        serial_receiver_(serial_receiver)
   {
     auto qos = rclcpp::QoS(10);
 
@@ -35,14 +37,10 @@ public:
 
     else {
       pub_ = node_->create_publisher<RosMsgT>(ros_topic_name, qos);
+      if (!pub_) return;
+      RosMsgT msg = decoder_(serial_receiver_());
+      pub_->publish(msg);
     }
-  }
-
-  // 电控 → ROS，通过这个入口就能完成回传
-  void receiveFromSerial(const PayloadT& payload) {
-    if (!pub_) return;
-    RosMsgT msg = decoder_(payload);
-    pub_->publish(msg);
   }
 
 private:
@@ -50,6 +48,7 @@ private:
   EncoderFunc encoder_;
   DecoderFunc decoder_;
   std::function<void(const PayloadT&)> serial_sender_;
+  std::function<const PayloadT&(void)> serial_receiver_;
   typename rclcpp::Publisher<RosMsgT>::SharedPtr pub_;
   typename rclcpp::Subscription<RosMsgT>::SharedPtr sub_;
 };
