@@ -10,12 +10,21 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
 {
   com_ = std::make_shared<SerialCommunicationClass>(this);
 
-  bridge_twist_ = std::make_shared<
-    RosSerialBridge<geometry_msgs::msg::Twist, Array25>>(
+  bridge_twist_pc_ = std::make_shared<RosSerialBridge
+    <geometry_msgs::msg::Twist, Array25>>(
       this, "/cmd_vel", true,
       std::bind(&BridgeNode::encodeTwist, this, std::placeholders::_1),
       [](const Array25&){ return geometry_msgs::msg::Twist{}; },
       std::bind(&SerialCommunicationClass::sendArray25, com_.get(), std::placeholders::_1)
+    );
+
+  bridge_Yaw_mcu_ = std::make_shared<RosSerialBridge
+    <std_msgs::msg::Float64, Array25>>(
+      this,
+      "/serial/Yaw",
+      false,
+      nullptr,
+      std::bind(&BridgeNode::decodeYaw, this, std::placeholders::_1)
     );
 }
 
@@ -30,6 +39,11 @@ Array25 BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   com_->writeFloatLE(&payload[4], vy);
   com_->writeFloatLE(&payload[8], wz);
   return payload;
+}
+
+std_msgs::msg::Float64 BridgeNode::decodeYaw(const Array25& payload)
+{
+
 }
 
 }  // namespace bridge

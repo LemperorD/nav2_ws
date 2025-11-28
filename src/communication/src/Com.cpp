@@ -294,3 +294,16 @@ void SerialCommunicationClass::writeFloatLE(uint8_t *dst, float value)
   dst[2] = static_cast<uint8_t>((bits >> 16) & 0xFFu);
   dst[3] = static_cast<uint8_t>((bits >> 24) & 0xFFu);
 }
+
+float SerialCommunicationClass::readFloatLE(const uint8_t *src)
+{
+  uint32_t bits =
+      (static_cast<uint32_t>(src[0])) |
+      (static_cast<uint32_t>(src[1]) << 8) |
+      (static_cast<uint32_t>(src[2]) << 16) |
+      (static_cast<uint32_t>(src[3]) << 24);
+
+  float value = 0.0f;
+  std::memcpy(&value, &bits, sizeof(float));
+  return value;
+}

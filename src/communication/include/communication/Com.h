@@ -29,6 +29,7 @@ public:
   ~SerialCommunicationClass();
 
   void writeFloatLE(uint8_t *dst, float value);
+  float readFloatLE(const uint8_t *src);
 
   // 发送一帧 25 字节数组（PC->电控）
   bool sendArray25(const std::array<uint8_t,25>& payload);
