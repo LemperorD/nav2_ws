@@ -83,11 +83,9 @@ geometry_msgs::msg::Twist BridgeNode::decodeTESspeed(const uint8_t* payload)
   geometry_msgs::msg::Twist msg;
   msg.angular.z = static_cast<double>(com_->readFloatLE(&payload[3]));
   return msg;
-
-} 
-
 }
-// namespace bridge
+
+}// namespace bridge
 
 int main(int argc, char** argv)
 {

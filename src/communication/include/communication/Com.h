@@ -55,5 +55,6 @@ private:
   std::thread timer_thread_;
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
-  std::vector<uint8_t> frame_buffer_{};
+  // std::vector<uint8_t> frame_buffer_{};
+  std::array<uint8_t, 256> frame_buffer_;
 };

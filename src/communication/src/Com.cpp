@@ -55,7 +55,7 @@ SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std
 
   running_ = true;
   timer_thread_ = std::thread(&SerialCommunicationClass::timerThread, this);
-  frame_buffer_.resize(23);
+  // frame_buffer_.resize(23);
 }
 
 SerialCommunicationClass::~SerialCommunicationClass() {
@@ -101,15 +101,15 @@ void SerialCommunicationClass::configureSerialPort(int baud_rate)
 
     speed_t speed;
     switch (baud_rate) {
-        case 9600: speed = B9600; break;
-        case 19200: speed = B19200; break;
-        case 38400: speed = B38400; break;
-        case 57600: speed = B57600; break;
-        case 115200: speed = B115200; break;
-        case 230400: speed = B230400; break;
-        default:
-            std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
-            return;
+      case 9600: speed = B9600; break;
+      case 19200: speed = B19200; break;
+      case 38400: speed = B38400; break;
+      case 57600: speed = B57600; break;
+      case 115200: speed = B115200; break;
+      case 230400: speed = B230400; break;
+      default:
+        std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
+        return;
     }
 
     cfsetispeed(&options, speed);
@@ -131,7 +131,8 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
 
   size_t frame_len = len + FRAME_MIN_SIZE;
 
-  uint8_t frame[frame_len];
+  // uint8_t frame[frame_len];
+  std::vector<uint8_t> frame(frame_len);
   frame[0] = FRAME_HEADER1;
   frame[1] = FRAME_HEADER2;
   frame[2] = COMMAND_CODE_ARRAY25;
@@ -139,24 +140,24 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
   std::memcpy(&frame[4], data, len);
 
   // CRC8 覆盖 Header(4) + Payload(n)
-  frame[frame_len - 1] = crc8_calc(frame, 4 + len);
+  frame[frame_len - 1] = crc8_calc(frame.data(), 4 + len);
 
-  ssize_t written = write(fd_, frame, frame_len);
-  if (written == static_cast<ssize_t>(frame_len)) {
-    RCLCPP_INFO(node_->get_logger(), "TX %ld bytes ok", frame_len);
-  } else {
+  ssize_t written = write(fd_, frame.data(), frame_len);
+  if (written != frame_len) {
     RCLCPP_ERROR(node_->get_logger(), "TX failed: written %ld / %zu", written, frame_len);
   }
 }
 
 uint8_t* SerialCommunicationClass::receiveDataFrame()
 {
-    return frame_buffer_.data();
+  ssize_t n = read(fd_, frame_buffer_.data(), frame_buffer_.size());
+  if (n <= 0) return nullptr;
+  RCLCPP_INFO(node_->get_logger(), "Received %ld bytes", n);
+  return frame_buffer_.data();
 }
 
 // ---------------- 接收：将有效帧交给 processFrame ----------------
 void SerialCommunicationClass::processBuffer() {
-
   size_t frames_processed = 0;
 
   while (buffer_index_ >= FRAME_MIN_SIZE && frames_processed < MAX_FRAMES_PER_LOOP) {
@@ -182,6 +183,11 @@ void SerialCommunicationClass::processBuffer() {
     // 至少要有 Header(4) 才能读 LEN
     if (buffer_index_ < 4) return;
 
+    if (buffer_[2] != COMMAND_CODE_ARRAY25) {
+      RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X (expected 0x%02X)", buffer_[2], COMMAND_CODE_ARRAY25);
+      buffer_index_ = 0;
+      return;
+    }
     const uint8_t len = buffer_[3];
     const size_t frame_len = static_cast<size_t>(len) + FRAME_MIN_SIZE; // 4+len+1
 
@@ -192,16 +198,14 @@ void SerialCommunicationClass::processBuffer() {
       return;
     }
 
-    if (buffer_index_ < frame_len) return; // 等待更多数据
+    if (buffer_index_ < frame_len) return;
 
     // CRC8 校验（Header+Payload）
     uint8_t calc = crc8_calc(buffer_.data(), 4 + len);
     if (calc != buffer_[frame_len - 1]) {
       RCLCPP_WARN(node_->get_logger(), "CRC8 failed: calc=0x%02X, recv=0x%02X, len=%d", calc, buffer_[frame_len - 1], len);
-      // 丢弃一个字节，继续
-      std::memmove(buffer_.data(), buffer_.data() + 1, buffer_index_ - 1);
-      buffer_index_ -= 1;
-      continue;
+      buffer_index_ = 0;
+      return;
     }
 
     // 交给帧处理
@@ -229,16 +233,15 @@ void SerialCommunicationClass::processFrame(const uint8_t* data) {
     return;
   }
 
-  // 常见电控上报：0xCD / 15 —— 先不上结构化，避免刷 Unknown 日志
-  if (cmd == 0xCD && len == 15) {
-    return;
-  }
-
   RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X LEN=%u (ignored)", cmd, len);
 }
 
 void SerialCommunicationClass::timerCallback() {
-  if (fd_ < 0) return;
+  if (fd_ < 0) 
+  {
+    RCLCPP_INFO(node_->get_logger(), "Serial port not available in timerCallback");
+    return;
+  }
 
   if (buffer_index_ >= BUFFER_SIZE - 64) {
     RCLCPP_WARN(node_->get_logger(), "Buffer near full, clearing");
@@ -248,14 +251,13 @@ void SerialCommunicationClass::timerCallback() {
   uint8_t temp[128];
   ssize_t n = read(fd_, temp, sizeof(temp));
   if (n > 0) {
-    size_t copy = static_cast<size_t>(n);
-    if (buffer_index_ + copy > BUFFER_SIZE) {
+    if (buffer_index_ + n > BUFFER_SIZE) {
       RCLCPP_WARN(node_->get_logger(), "Buffer overflow, drop");
       buffer_index_ = 0;
       return;
     }
-    std::memcpy(buffer_.data() + buffer_index_, temp, copy);
-    buffer_index_ += copy;
+    std::memcpy(buffer_.data() + buffer_index_, temp, n);
+    buffer_index_ += n;
     processBuffer();
   }
 }
