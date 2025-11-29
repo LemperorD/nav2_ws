@@ -6,9 +6,16 @@ namespace bridge
 {
 
 BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
-: Node("bridge", options)
+: Node("bridge", options),
+  port_name_("/dev/ttyACM0"),
+  baud_rate_(115200)
 {
-  com_ = std::make_shared<SerialCommunicationClass>(this);
+  this->declare_parameter<std::string>("port_name", "/dev/ttyACM0");
+  this->declare_parameter<int>("baud_rate", 115200);
+  this->get_parameter("port_name", port_name_);
+  this->get_parameter("baud_rate", baud_rate_);
+
+  com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
   bridge_twist_pc_ = std::make_shared<RosSerialBridge
     <geometry_msgs::msg::Twist>>(

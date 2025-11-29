@@ -28,6 +28,8 @@ private:
   std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
 
 private:
+  std::string port_name_;
+  int baud_rate_;
   std::shared_ptr<SerialCommunicationClass> com_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
   std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64>> bridge_Yaw_mcu_;

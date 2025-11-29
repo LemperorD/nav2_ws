@@ -39,15 +39,15 @@ uint8_t SerialCommunicationClass::crc8_calc(const uint8_t* p, size_t len) {
 }
 
 // ---------------- 构造/析构 ----------------
-SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port)
+SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port, int baud_rate)
   : node_(node)
 {
   if (!serial_port.empty()) {
-    openSerialPort(serial_port);
+    openSerialPort(serial_port, baud_rate);
   } else {
     std::string port = findSerialPort();
     if (!port.empty()) {
-      openSerialPort(port);
+      openSerialPort(port, baud_rate);
     } else {
       RCLCPP_ERROR(node_->get_logger(), "No serial port found.");
     }
@@ -63,14 +63,14 @@ SerialCommunicationClass::~SerialCommunicationClass() {
   if (fd_ >= 0) ::close(fd_);
 }
 
-void SerialCommunicationClass::openSerialPort(const std::string& port_name)
+void SerialCommunicationClass::openSerialPort(const std::string& port_name, int baud_rate)
 {
     fd_ = ::open(port_name.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ == -1) {
         RCLCPP_ERROR(node_->get_logger(), "Failed to open serial port: %s", strerror(errno));
     } else {
         RCLCPP_INFO(node_->get_logger(), "Serial port opened: %s", port_name.c_str());
-        configureSerialPort();
+        configureSerialPort(baud_rate);
     }
 }
 
@@ -93,12 +93,26 @@ std::string SerialCommunicationClass::findSerialPort()
     return "";
 }
 
-void SerialCommunicationClass::configureSerialPort()
+void SerialCommunicationClass::configureSerialPort(int baud_rate)
 {
     struct termios options;
     tcgetattr(fd_, &options);
-    cfsetispeed(&options, B115200);
-    cfsetospeed(&options, B115200);
+
+    speed_t speed;
+    switch (baud_rate) {
+        case 9600: speed = B9600; break;
+        case 19200: speed = B19200; break;
+        case 38400: speed = B38400; break;
+        case 57600: speed = B57600; break;
+        case 115200: speed = B115200; break;
+        case 230400: speed = B230400; break;
+        default:
+            std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
+            return;
+    }
+
+    cfsetispeed(&options, speed);
+    cfsetospeed(&options, speed);
     options.c_cflag |= (CLOCAL | CREAD);
     options.c_cflag &= ~CSIZE;
     options.c_cflag |= CS8;

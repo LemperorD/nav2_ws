@@ -23,7 +23,7 @@ static constexpr size_t MAX_FRAMES_PER_LOOP = 10; // 避免长时间占用：一
 
 class SerialCommunicationClass {
 public:
-  explicit SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port = "");
+  explicit SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port = "", int baud_rate = 115200);
   ~SerialCommunicationClass();
 
   void writeFloatLE(uint8_t *dst, float value);
@@ -45,9 +45,9 @@ private:
   static uint8_t crc8_calc(const uint8_t* p, size_t len);
 
 private:
-  void openSerialPort(const std::string& port_name);
+  void openSerialPort(const std::string& port_name, int baud_rate);
   std::string findSerialPort();
-  void configureSerialPort();
+  void configureSerialPort(int baud_rate);
 
   rclcpp::Node* node_{nullptr};
   int fd_ = -1;
