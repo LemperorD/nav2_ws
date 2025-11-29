@@ -13,7 +13,7 @@ static constexpr uint8_t FRAME_HEADER1 = 0x42;
 static constexpr uint8_t FRAME_HEADER2 = 0x52;
 
 // 自定义命令码：25字节裸数组（两端统一）
-static constexpr uint8_t COMMAND_CODE_ARRAY25 = 0xE1;
+static constexpr uint8_t COMMAND_CODE_ARRAY25 = 0xCD;
 
 // 缓冲与帧尺寸（最小帧 = 2B SOF + 1B CMD + 1B LEN + 1B CRC8 = 5）
 static constexpr size_t BUFFER_SIZE    = 256;
@@ -39,7 +39,7 @@ private:
 
   // 解析
   void processBuffer();
-  void processFrame(const uint8_t* data, size_t n);
+  void processFrame(const uint8_t* data);
 
   // ---- CRC8（电控同款：RM常用表驱动，poly=0x31, init=0xFF） ----
   static uint8_t crc8_calc(const uint8_t* p, size_t len);

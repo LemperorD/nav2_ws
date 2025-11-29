@@ -27,11 +27,20 @@ ament_target_dependencies(bridge_node
   geometry_msgs
 )
 
+add_executable(cmdvel_sine_pub src/cmdvel_sine_pub.cpp)
+ament_target_dependencies(cmdvel_sine_pub rclcpp geometry_msgs)
+install(TARGETS cmdvel_sine_pub DESTINATION lib/${PROJECT_NAME})
+
 install(TARGETS communication bridge_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/ DESTINATION include)
+
+install(
+  DIRECTORY config launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_package()

@@ -31,7 +31,8 @@ public:
         ros_topic_name, qos,
         [this](const typename RosMsgT::SharedPtr msg){
           const uint8_t* payload = encoder_(*msg);
-          serial_sender_(payload, sizeof(payload));
+          serial_sender_(payload, 26);
+          delete[] payload;
         });
     }
 

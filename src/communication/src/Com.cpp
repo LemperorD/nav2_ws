@@ -55,6 +55,7 @@ SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std
 
   running_ = true;
   timer_thread_ = std::thread(&SerialCommunicationClass::timerThread, this);
+  frame_buffer_.resize(23);
 }
 
 SerialCommunicationClass::~SerialCommunicationClass() {
@@ -137,10 +138,15 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
   frame[3] = static_cast<uint8_t>(len);
   std::memcpy(&frame[4], data, len);
 
-  // CRC8 覆盖 Header(4) + Payload(25)
+  // CRC8 覆盖 Header(4) + Payload(n)
   frame[frame_len - 1] = crc8_calc(frame, 4 + len);
 
-  ::write(fd_, frame, sizeof(frame));
+  ssize_t written = write(fd_, frame, frame_len);
+  if (written == static_cast<ssize_t>(frame_len)) {
+    RCLCPP_INFO(node_->get_logger(), "TX %ld bytes ok", frame_len);
+  } else {
+    RCLCPP_ERROR(node_->get_logger(), "TX failed: written %ld / %zu", written, frame_len);
+  }
 }
 
 uint8_t* SerialCommunicationClass::receiveDataFrame()
@@ -191,7 +197,7 @@ void SerialCommunicationClass::processBuffer() {
     // CRC8 校验（Header+Payload）
     uint8_t calc = crc8_calc(buffer_.data(), 4 + len);
     if (calc != buffer_[frame_len - 1]) {
-      RCLCPP_WARN(node_->get_logger(), "CRC8 failed: calc=0x%02X, recv=0x%02X", calc, buffer_[frame_len - 1]);
+      RCLCPP_WARN(node_->get_logger(), "CRC8 failed: calc=0x%02X, recv=0x%02X, len=%d", calc, buffer_[frame_len - 1], len);
       // 丢弃一个字节，继续
       std::memmove(buffer_.data(), buffer_.data() + 1, buffer_index_ - 1);
       buffer_index_ -= 1;
@@ -199,7 +205,7 @@ void SerialCommunicationClass::processBuffer() {
     }
 
     // 交给帧处理
-    processFrame(buffer_.data(), frame_len);
+    processFrame(buffer_.data());
     ++frames_processed;
 
     // 移走已处理的帧
@@ -213,14 +219,13 @@ void SerialCommunicationClass::processBuffer() {
 }
 
 // ---------------- 对有效帧做分发 ----------------
-void SerialCommunicationClass::processFrame(const uint8_t* data, size_t n) {
-  (void)n;
+void SerialCommunicationClass::processFrame(const uint8_t* data) {
   const uint8_t cmd = data[2];
   const uint8_t len = data[3];
   const uint8_t* pl = &data[4];
 
-  if (cmd == COMMAND_CODE_ARRAY25 && len == 25) {
-    std::memcpy(frame_buffer_.data(), pl, 25);
+  if (cmd == COMMAND_CODE_ARRAY25) {
+    std::memcpy(frame_buffer_.data(), pl, len);
     return;
   }
 
@@ -241,7 +246,7 @@ void SerialCommunicationClass::timerCallback() {
   }
 
   uint8_t temp[128];
-  ssize_t n = ::read(fd_, temp, sizeof(temp));
+  ssize_t n = read(fd_, temp, sizeof(temp));
   if (n > 0) {
     size_t copy = static_cast<size_t>(n);
     if (buffer_index_ + copy > BUFFER_SIZE) {
