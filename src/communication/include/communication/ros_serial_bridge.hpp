@@ -35,12 +35,18 @@ public:
           delete[] payload;
         });
     }
-
     else {
       pub_ = node_->create_publisher<RosMsgT>(ros_topic_name, qos);
-      if (!pub_) return;
-      RosMsgT msg = decoder_(serial_receiver_());
-      pub_->publish(msg);
+      recv_thread_ = std::thread([this]() {
+      rclcpp::Rate r(200); // 200Hz = 5ms
+        while (rclcpp::ok()) {
+            const uint8_t* payload = serial_receiver_();
+            if (!payload) continue;
+            RosMsgT msg = decoder_(payload);
+            pub_->publish(msg);
+            r.sleep();
+        }
+      });
     }
   }
 
@@ -51,6 +57,7 @@ private:
   std::function<void(const uint8_t*, size_t)> serial_sender_;
   std::function<const uint8_t*(void)> serial_receiver_;
   typename rclcpp::Publisher<RosMsgT>::SharedPtr pub_;
+  std::thread recv_thread_;
   typename rclcpp::Subscription<RosMsgT>::SharedPtr sub_;
 };
 

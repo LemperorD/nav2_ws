@@ -66,12 +66,13 @@ SerialCommunicationClass::~SerialCommunicationClass() {
 
 void SerialCommunicationClass::openSerialPort(const std::string& port_name, int baud_rate)
 {
-    fd_ = ::open(port_name.c_str(), O_RDWR | O_NOCTTY);
+    fd_ = open(port_name.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd_ == -1) {
         RCLCPP_ERROR(node_->get_logger(), "Failed to open serial port: %s", strerror(errno));
     } else {
         RCLCPP_INFO(node_->get_logger(), "Serial port opened: %s", port_name.c_str());
         configureSerialPort(baud_rate);
+        RCLCPP_INFO(node_->get_logger(), "Serial initialized: %s", port_name.c_str());
     }
 }
 
@@ -96,30 +97,57 @@ std::string SerialCommunicationClass::findSerialPort()
 
 void SerialCommunicationClass::configureSerialPort(int baud_rate)
 {
-    struct termios options;
-    tcgetattr(fd_, &options);
+  struct termios tty;
+  memset(&tty, 0, sizeof(tty));
 
-    speed_t speed;
-    switch (baud_rate) {
-      case 9600: speed = B9600; break;
-      case 19200: speed = B19200; break;
-      case 38400: speed = B38400; break;
-      case 57600: speed = B57600; break;
-      case 115200: speed = B115200; break;
-      case 230400: speed = B230400; break;
-      default:
-        std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
-        return;
-    }
+  if (tcgetattr(fd_, &tty) != 0) {
+    RCLCPP_ERROR(node_->get_logger(), "Failed to get serial attributes");
+    close(fd_);
+    fd_ = -1;
+    return;
+  }
 
-    cfsetispeed(&options, speed);
-    cfsetospeed(&options, speed);
-    options.c_cflag |= (CLOCAL | CREAD);
-    options.c_cflag &= ~CSIZE;
-    options.c_cflag |= CS8;
-    options.c_cflag &= ~PARENB;
-    options.c_cflag &= ~CSTOPB;
-    tcsetattr(fd_, TCSANOW, &options);
+  speed_t speed;
+  switch (baud_rate) {
+    case 9600: speed = B9600; break;
+    case 19200: speed = B19200; break;
+    case 38400: speed = B38400; break;
+    case 57600: speed = B57600; break;
+    case 115200: speed = B115200; break;
+    case 230400: speed = B230400; break;
+    default:
+      std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
+      return;
+  }
+
+  cfsetospeed(&tty, speed);
+  cfsetispeed(&tty, speed);
+
+  tty.c_cflag |= (CLOCAL | CREAD);
+  tty.c_cflag &= ~CSIZE;
+  tty.c_cflag |= CS8;
+  tty.c_cflag &= ~PARENB;
+  tty.c_cflag &= ~CSTOPB;
+  tty.c_cflag &= ~CRTSCTS;
+
+  tty.c_lflag &= ~ICANON;
+  tty.c_lflag &= ~ECHO;
+  tty.c_lflag &= ~ISIG;
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+  tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
+  tty.c_oflag &= ~OPOST;
+
+  tty.c_cc[VMIN] = 0;
+  tty.c_cc[VTIME] = 1;
+
+  if (tcsetattr(fd_, TCSANOW, &tty) != 0) {
+    RCLCPP_ERROR(node_->get_logger(), "Failed to set serial attributes");
+    close(fd_);
+    fd_ = -1;
+    return;
+  }
+
+  tcflush(fd_, TCIOFLUSH);
 }
 
 // 帧结构（BR协议）：42 52 | CMD(0xE1) | LEN(n) | PAYLOAD[n] | CRC8
@@ -150,9 +178,13 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
 
 uint8_t* SerialCommunicationClass::receiveDataFrame()
 {
-  ssize_t n = read(fd_, frame_buffer_.data(), frame_buffer_.size());
-  if (n <= 0) return nullptr;
-  RCLCPP_INFO(node_->get_logger(), "Received %ld bytes", n);
+  // std::cout << "[ ";
+  // for (size_t i = 0; i < 23; i++) {
+  //   std::cout << std::setw(2) << std::setfill('0')
+  //     << std::hex << std::uppercase
+  //     << static_cast<int>(frame_buffer_[i]) << " ";
+  // }
+  // std::cout << "]" << std::dec << std::endl;
   return frame_buffer_.data();
 }
 
@@ -229,7 +261,14 @@ void SerialCommunicationClass::processFrame(const uint8_t* data) {
   const uint8_t* pl = &data[4];
 
   if (cmd == COMMAND_CODE_ARRAY25) {
-    std::memcpy(frame_buffer_.data(), pl, len);
+    std::memmove(frame_buffer_.data(), pl, len);
+    // std::cout << "[ ";
+    // for (size_t i = 0; i < 23; i++) {
+    //   std::cout << std::setw(2) << std::setfill('0')
+    //     << std::hex << std::uppercase
+    //     << static_cast<int>(frame_buffer_[i]) << " ";
+    // }
+    // std::cout << "]" << std::dec << std::endl;
     return;
   }
 

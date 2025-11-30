@@ -31,6 +31,7 @@ public:
 
   void sendDataFrame(const uint8_t* data, size_t len);
   uint8_t* receiveDataFrame();
+  std::array<uint8_t, 23> frame_buffer_;
 
 private:
   // 轮询线程（~1ms）
@@ -56,5 +57,4 @@ private:
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
   // std::vector<uint8_t> frame_buffer_{};
-  std::array<uint8_t, 256> frame_buffer_;
 };
