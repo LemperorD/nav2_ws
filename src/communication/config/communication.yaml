@@ -1,0 +1,4 @@
+/**:
+    ros__parameters:
+        port_name : "/dev/ttyACM0"
+        baud_rate : 115200 # options: 9600, 19200, 38400, 57600, 115200, 230400

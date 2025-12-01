@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)  # 新增
+find_package(geometry_msgs REQUIRED)
 
 # 库
 add_library(communication SHARED src/Com.cpp)
@@ -19,21 +19,28 @@ target_include_directories(communication PUBLIC
 ament_target_dependencies(communication rclcpp)
 
 # 可执行
-add_executable(array25_bridge src/array25_bridge.cpp)
-target_link_libraries(array25_bridge communication)
-ament_target_dependencies(array25_bridge
+add_executable(bridge_node src/bridge.cpp)
+target_link_libraries(bridge_node communication)
+ament_target_dependencies(bridge_node
   rclcpp
   std_msgs
-  geometry_msgs  # 新增
+  geometry_msgs
 )
 
-# 关键：不要有任何把 src/ 整目录装进 lib 的 install(DIRECTORY ...)！
-# 正确的安装规则只有这一段：
-install(TARGETS communication array25_bridge
+add_executable(cmdvel_sine_pub src/cmdvel_sine_pub.cpp)
+ament_target_dependencies(cmdvel_sine_pub rclcpp geometry_msgs)
+install(TARGETS cmdvel_sine_pub DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS communication bridge_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/ DESTINATION include)
+
+install(
+  DIRECTORY config launch
+  DESTINATION share/${PROJECT_NAME}
+)
 
 ament_package()

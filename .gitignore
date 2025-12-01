@@ -6,8 +6,6 @@ log/
 
 .vscode/
 
-src/.vscode/
-
 src/rmoss_core/
 
 src/rmoss_gazebo/
