@@ -120,7 +120,7 @@ ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
 
 ```bash
 ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
-world:=rmul_2025 \
+world:=rmul_2026 \
 slam:=False
 #注：上述命令使用了联盟赛的3v3地图，方便后续行为树决策部分使用
 ```
