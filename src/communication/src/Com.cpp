@@ -170,6 +170,14 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
   // CRC8 覆盖 Header(4) + Payload(n)
   frame[frame_len - 1] = crc8_calc(frame.data(), 4 + len);
 
+  // std::cout << "[ ";
+  // for (size_t i = 0; i < 31; i++) {
+  //   std::cout << std::setw(2) << std::setfill('0')
+  //     << std::hex << std::uppercase
+  //     << static_cast<int>(frame[i]) << " ";
+  // }
+  // std::cout << "]" << std::dec << std::endl;
+
   ssize_t written = write(fd_, frame.data(), frame_len);
   if (written != frame_len) {
     RCLCPP_ERROR(node_->get_logger(), "TX failed: written %ld / %zu", written, frame_len);

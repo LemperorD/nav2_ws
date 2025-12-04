@@ -4,6 +4,10 @@ install/
 
 log/
 
+map_simulation/
+
+map_real/
+
 .vscode/
 
 src/rmoss_core/

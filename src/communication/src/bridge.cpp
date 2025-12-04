@@ -67,6 +67,14 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   com_->writeFloatLE(&payload[18], vy);
   com_->writeFloatLE(&payload[22], wz);
 
+  // std::cout << "[ ";
+  // for (size_t i = 0; i < 26; i++) {
+  //   std::cout << std::setw(2) << std::setfill('0')
+  //     << std::hex << std::uppercase
+  //     << static_cast<int>(payload[i]) << " ";
+  // }
+  // std::cout << "]" << std::dec << std::endl;
+
   // RCLCPP_INFO(this->get_logger(), "Encoded Twist: vx=%.2f, vy=%.2f, wz=%.2f", vx, vy, wz);
   return payload;
 }
