@@ -270,13 +270,6 @@ void SerialCommunicationClass::processFrame(const uint8_t* data) {
 
   if (cmd == COMMAND_CODE_ARRAY25) {
     std::memmove(frame_buffer_.data(), pl, len);
-    // std::cout << "[ ";
-    // for (size_t i = 0; i < 23; i++) {
-    //   std::cout << std::setw(2) << std::setfill('0')
-    //     << std::hex << std::uppercase
-    //     << static_cast<int>(frame_buffer_[i]) << " ";
-    // }
-    // std::cout << "]" << std::dec << std::endl;
     return;
   }
 

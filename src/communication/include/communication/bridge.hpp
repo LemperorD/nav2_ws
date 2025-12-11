@@ -2,6 +2,10 @@
 #define BRIDGE_NODE_HPP
 
 #include <rclcpp/rclcpp.hpp>
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <std_msgs/msg/float64.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
@@ -24,6 +28,9 @@ public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
 
 private:
+  void publishTransformGimbalVision();
+
+private:
   uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
   std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
   geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
@@ -37,6 +44,10 @@ private:
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
   std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64>> bridge_Yaw_mcu_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_TESspeed_mcu_;
+
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 
 }  // namespace bridge

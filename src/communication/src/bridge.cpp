@@ -83,7 +83,6 @@ std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
   msg.data = static_cast<double>(com_->readFloatLE(&payload[7]));
-  // RCLCPP_INFO(this->get_logger(), "Decoded Yaw: %.2f", msg.data);
   return msg;
 }
 
@@ -91,7 +90,6 @@ geometry_msgs::msg::Twist BridgeNode::decodeTESspeed(const uint8_t* payload)
 {
   geometry_msgs::msg::Twist msg;
   msg.angular.z = static_cast<double>(com_->readFloatLE(&payload[3]));
-  // RCLCPP_INFO(this->get_logger(), "Decoded TES speed: wz=%.2f", msg.angular.z);
   return msg;
 }
 
