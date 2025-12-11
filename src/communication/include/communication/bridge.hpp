@@ -27,7 +27,8 @@ class BridgeNode : public rclcpp::Node
 public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
 
-private:
+private: // create a frame for vision
+  rclcpp::TimerBase::SharedPtr gimbal_vision_timer_;
   void publishTransformGimbalVision();
 
 private:

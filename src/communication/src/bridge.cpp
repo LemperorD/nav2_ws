@@ -17,6 +17,10 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
+
   bridge_twist_pc_ = std::make_shared<RosSerialBridge
     <geometry_msgs::msg::Twist>>(
       this, "/cmd_vel", true,
@@ -43,6 +47,10 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       nullptr,
       std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get())
     );
+
+  gimbal_vision_timer_ = this->create_wall_timer(
+  std::chrono::milliseconds(30),
+  std::bind(&BridgeNode::publishTransformGimbalVision, this));
 }
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
@@ -91,6 +99,49 @@ geometry_msgs::msg::Twist BridgeNode::decodeTESspeed(const uint8_t* payload)
   geometry_msgs::msg::Twist msg;
   msg.angular.z = static_cast<double>(com_->readFloatLE(&payload[3]));
   return msg;
+}
+
+void BridgeNode::publishTransformGimbalVision()
+{
+  geometry_msgs::msg::TransformStamped transformStamped;
+
+  try {
+    transformStamped = tf_buffer_->lookupTransform(
+      "odom", "base_footprint",
+      tf2::TimePointZero);
+  } catch (tf2::TransformException &ex) {
+    RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
+    return;
+  }
+
+  tf2::Quaternion q(
+    transformStamped.transform.rotation.x,
+    transformStamped.transform.rotation.y,
+    transformStamped.transform.rotation.z,
+    transformStamped.transform.rotation.w
+  );
+
+  double roll, pitch, yaw;
+  tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+  geometry_msgs::msg::TransformStamped gimbal_tf;
+  gimbal_tf.header.stamp = this->get_clock()->now();
+  gimbal_tf.header.frame_id = "base_footprint";
+  gimbal_tf.child_frame_id = "gimbal_yaw_vision";
+
+  gimbal_tf.transform.translation.x = 0.0;
+  gimbal_tf.transform.translation.y = 0.0;
+  gimbal_tf.transform.translation.z = 0.0;
+
+  tf2::Quaternion q_yaw;
+  q_yaw.setRPY(0, 0, -yaw);
+
+  gimbal_tf.transform.rotation.x = q_yaw.x();
+  gimbal_tf.transform.rotation.y = q_yaw.y();
+  gimbal_tf.transform.rotation.z = q_yaw.z();
+  gimbal_tf.transform.rotation.w = q_yaw.w();
+  
+  tf_broadcaster_->sendTransform(gimbal_tf);
 }
 
 }// namespace bridge
