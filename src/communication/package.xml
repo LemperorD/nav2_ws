@@ -2,7 +2,7 @@
 <package format="3">
   <name>communication</name>
   <version>0.1.0</version>
-  <description>Serial communication library for Array25 frames (A5 5A | 0x31 | 25 | payload | CRC8).</description>
+  <description>Serial communication package for Array25 frames (A5 5A | 0x31 | 25 | payload | CRC8).</description>
 
   <maintainer email="you@example.com">you</maintainer>
   <license>MIT</license>

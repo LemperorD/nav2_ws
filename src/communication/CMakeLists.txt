@@ -6,10 +6,14 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies()
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # 库
 add_library(communication SHARED src/Com.cpp)
@@ -25,6 +29,7 @@ ament_target_dependencies(bridge_node
   rclcpp
   std_msgs
   geometry_msgs
+  tf2_ros
 )
 
 add_executable(cmdvel_sine_pub src/cmdvel_sine_pub.cpp)
