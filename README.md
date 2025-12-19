@@ -90,8 +90,8 @@ git clone https://github.com/MIT-SPARK/KISS-Matcher.git
 cd KISS-Matcher
 ```
 
-修改Makefile中的cppinstall和cppinstall_matcher_only为如下所示（添加两行）
-```
+接下来修改``Makefile``中的``cppinstall``和``cppinstall_matcher_only``为如下所示（添加两行）
+```make
 cppinstall: deps
 	@mkdir -p cpp/kiss_matcher/build
 	@cmake -Bcpp/kiss_matcher/build cpp/kiss_matcher -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_CXX_FLAGS="-fPIC"
@@ -122,7 +122,21 @@ sudo make install
 sudo ldconfig
 ```
 
-## 7. 编译
+## 7. 针对实车的小修改
+
+- 删除``armor_detect_openvino``和``armor_detect_tensorrt``两个功能包
+- 在``src/pb2025_rm_vision/pb2025_vision_bringup/CMakeLists.txt``中注释掉``model``的安装部分，即：
+```cmake
+ament_auto_package(
+  INSTALL_TO_SHARE
+  launch
+  # model
+  params
+  rviz
+)
+```
+
+## 8. 编译
 
 如果安装了MVS，请在**编译**和**运行导航**前运行
 
@@ -142,10 +156,15 @@ rosdep init # 如果初始化过rosdep请忽略这一步
 rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 ```
 ```bash
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel 2
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-## 8. 运行
+> 注：上位机可能算力不够，初次编译会出现死机状况，可以增加``--parallel 2``参数，调整后命令如下：
+> ```bash
+> colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel 2
+> ```
+
+## 9. 运行
 
 先在工作空间根目录下source环境变量。
 ```bash
@@ -191,7 +210,7 @@ slam:=True
 
 具体的更改地图、调参等功能请移步``tutorial.md``查看。
 
-## 9. 假裁判系统及操作手客户端
+## 10. 假裁判系统及操作手客户端
 
 假裁判系统及操作手客户端需安装如下python第三方库
 ```bash
