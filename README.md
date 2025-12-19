@@ -219,6 +219,6 @@ pip install Flask
 pip install flask-cors
 pip install flask-socketio
 ```
-使用``./shfiles/local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
+使用``./scripts/local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
 
-使用``/shfiles/local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
+使用``/scripts/local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
