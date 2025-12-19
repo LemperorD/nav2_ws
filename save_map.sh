@@ -1,13 +1,13 @@
 #!/bin/bash
-
 source ./install/setup.bash
 
-cd map_simulation || {
-  echo "目录 map_simulation 不存在！"
+cd /home/sentry-nav/nav2_ws/map_reality || {
+  echo "目录 map_reality 不存在!"
   exit 1
 }
 
 TIME_STR=$(date +"%Y-%m-%d_%H-%M-%S")
-MAP_NAME="map_simu_${TIME_STR}"
+MAP_NAME="map_real_${TIME_STR}"
 
-ros2 run nav2_map_server map_saver_cli -f "$MAP_NAME" --ros-args -r __ns:=/red_standard_robot1
+echo "保存 2D 栅格地图到 $(pwd)/${MAP_NAME}.*"
+ros2 run nav2_map_server map_saver_cli -f "$MAP_NAME"
