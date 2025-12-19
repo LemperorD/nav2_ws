@@ -1,7 +1,7 @@
 #!/bin/bash
 source ./install/setup.bash
 
-cd /home/sentry-nav/nav2_ws/map_reality || {
+cd ~/nav2_ws/map_reality || {
   echo "目录 map_reality 不存在!"
   exit 1
 }
