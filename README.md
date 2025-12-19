@@ -5,7 +5,7 @@
 > 此为新版README.md，在将北极熊大量功能包全部fork过来之后笔者重新编写了安装文档。
 
 <div style="text-align: center;">
-  <img src="images/transistor_code.png" width="400" height="400">
+  <img src="docs/images/transistor_code.png" width="400" height="400">
 </div>
 
 本仓库为北航Transistor战队2026赛季哨兵机器人的工作空间，参考了深北莫北极熊战队开源的导航功能包，丰富了假裁判系统等功能，同时做了一些修改。
@@ -212,13 +212,13 @@ slam:=True
 
 ## 10. 假裁判系统及操作手客户端
 
-假裁判系统及操作手客户端需安装如下python第三方库
+使用假裁判系统及操作手客户端需安装如下python第三方库
 ```bash
 pip install engineio
 pip install Flask
 pip install flask-cors
 pip install flask-socketio
 ```
-使用``local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
+使用``./shfiles/local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
 
-使用``local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
+使用``/shfiles/local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
