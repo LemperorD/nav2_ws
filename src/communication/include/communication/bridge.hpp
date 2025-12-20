@@ -20,7 +20,7 @@ typedef enum
   chassisFollowed = 1,
   littleTES,
   goHome,
-} fightState;
+} chassisMode;
 
 class BridgeNode : public rclcpp::Node
 {
