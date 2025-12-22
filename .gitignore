@@ -12,6 +12,10 @@ ros2bag_nav/
 
 .vscode/
 
+.cache/
+
+compile_commands.json
+
 src/rmoss_core/
 
 src/rmoss_gazebo/
