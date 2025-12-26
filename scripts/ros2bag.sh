@@ -1,8 +1,7 @@
 cd ~/nav2_ws
 source ./install/setup.bash
 cd ~/nav2_ws/ros2bag_nav
-ros2 bag record 
-    /Laser_map \
+ros2 bag record /Laser_map \
     /aft_mapped_to_init \
     /bond \
     /cloud_clearing \
