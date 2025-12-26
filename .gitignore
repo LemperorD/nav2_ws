@@ -10,6 +10,8 @@ map_reality/
 
 ros2bag_nav/
 
+pcd/
+
 .vscode/
 
 .cache/
