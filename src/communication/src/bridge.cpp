@@ -51,6 +51,12 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   gimbal_vision_timer_ = this->create_wall_timer(
   std::chrono::milliseconds(30),
   std::bind(&BridgeNode::publishTransformGimbalVision, this));
+
+  chassis_mode_sub_ = this->create_subscription<std_msgs::msg::Float64>(
+    "/chassis/mode", 10,
+    [this](const std_msgs::msg::Float64::SharedPtr msg) {
+      chassis_mode_ = static_cast<uint8_t>(msg->data);
+    });
 }
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
@@ -64,7 +70,10 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 
   uint8_t* payload = new uint8_t[26]();
 
-  payload[0] = littleTES; // TBD: get from behavior
+  payload[0] = chassisFollowed; //默认为底盘跟随模式
+  // payload[0] = littleTES; //默认为小陀螺模式
+  // payload[0] = chasis_mode_; //由上层行为树控制底盘模式
+
   com_->writeFloatLE(&payload[1], angle_init_); // TBD: get from relocalization TF
   payload[5] = true; // TBD: get child_mode from behavior
 

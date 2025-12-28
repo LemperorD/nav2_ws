@@ -49,6 +49,14 @@ private:
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
+  // 多输入/输出的额外sub/pub可在此添加
+  // Additional sub/pub for multi-input/output can be added here
+  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr chassis_mode_sub_;
+
+  // 多输入/输出所使用的成员变量可在此添加
+  // Member variables used for multi-input/output can be added here
+  uint8_t chassis_mode_;
 };
 
 }  // namespace bridge
