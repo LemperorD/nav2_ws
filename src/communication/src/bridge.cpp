@@ -53,7 +53,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   std::bind(&BridgeNode::publishTransformGimbalVision, this));
 
   chassis_mode_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-    "/chassis/mode", 10,
+    "/chassis_mode", 10,
     [this](const std_msgs::msg::Float64::SharedPtr msg) {
       chassis_mode_ = static_cast<uint8_t>(msg->data);
     });
@@ -63,10 +63,10 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
   float vx = static_cast<float>(msg.linear.x);
   float vy = static_cast<float>(msg.linear.y);
-  float wz = static_cast<float>(msg.angular.z); // TBD: change to chassis frame
+  float wz = static_cast<float>(msg.angular.z); // TODO: change to chassis frame
 
   float vx_Y = static_cast<float>(msg.linear.x);
-  float vy_Y = static_cast<float>(msg.linear.y); // TBD: change to YAW frame
+  float vy_Y = static_cast<float>(msg.linear.y); // TODO: change to YAW frame
 
   uint8_t* payload = new uint8_t[26]();
 
@@ -74,8 +74,8 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   // payload[0] = littleTES; //默认为小陀螺模式
   // payload[0] = chasis_mode_; //由上层行为树控制底盘模式
 
-  com_->writeFloatLE(&payload[1], angle_init_); // TBD: get from relocalization TF
-  payload[5] = true; // TBD: get child_mode from behavior
+  com_->writeFloatLE(&payload[1], angle_init_); // TODO: get from relocalization TF
+  payload[5] = true; // TODO: get child_mode from behavior
 
   com_->writeFloatLE(&payload[6], vx_Y);
   com_->writeFloatLE(&payload[10], vy_Y);
@@ -100,6 +100,7 @@ std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
   msg.data = static_cast<double>(com_->readFloatLE(&payload[7]));
+  // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }
 
@@ -151,6 +152,31 @@ void BridgeNode::publishTransformGimbalVision()
   gimbal_tf.transform.rotation.w = q_yaw.w();
   
   tf_broadcaster_->sendTransform(gimbal_tf);
+}
+
+void BridgeNode::publishTransformGimbalYaw(double Yaw)
+{
+  geometry_msgs::msg::TransformStamped tf_msg;
+
+  tf_msg.header.stamp = this->get_clock()->now();
+  tf_msg.header.frame_id = "gimbal_yaw_odom";
+  tf_msg.child_frame_id  = "gimbal_yaw";
+
+  // 1️⃣ 平移（yaw 关节一般不平移）
+  tf_msg.transform.translation.x = 0.0;
+  tf_msg.transform.translation.y = 0.0;
+  tf_msg.transform.translation.z = 0.0;
+
+  // 2️⃣ 旋转（绕 Z 轴）
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, Yaw);
+
+  tf_msg.transform.rotation.x = q.x();
+  tf_msg.transform.rotation.y = q.y();
+  tf_msg.transform.rotation.z = q.z();
+  tf_msg.transform.rotation.w = q.w();
+
+  tf_broadcaster_->sendTransform(tf_msg);
 }
 
 }// namespace bridge

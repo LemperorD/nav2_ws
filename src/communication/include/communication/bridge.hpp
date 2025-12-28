@@ -27,14 +27,17 @@ class BridgeNode : public rclcpp::Node
 public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
 
+private: // 编解码函数
+  uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
+  std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
+  geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
+
 private: // create a frame for vision
   rclcpp::TimerBase::SharedPtr gimbal_vision_timer_;
   void publishTransformGimbalVision();
 
-private:
-  uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
-  std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
-  geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
+private: // generate TF from gimbal_yaw_odom to gimbal_yaw 
+  void publishTransformGimbalYaw(double Yaw);
 
 private:
   std::string port_name_;
