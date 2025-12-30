@@ -121,7 +121,7 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
-  msg.data = static_cast<double>(com_->readFloatLE(&payload[7]));
+  msg.data = encoderToRad(com_->readFloatLE(&payload[7]));
   // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }

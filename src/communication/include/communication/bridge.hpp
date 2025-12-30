@@ -1,6 +1,8 @@
 #ifndef BRIDGE_NODE_HPP
 #define BRIDGE_NODE_HPP
 
+#include <cmath>
+
 #include <rclcpp/rclcpp.hpp>
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -27,6 +29,13 @@ class BridgeNode : public rclcpp::Node
 public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
   ~BridgeNode() override;
+
+public: // 大Yaw电机编码值解码
+  inline double encoderToRad(float encoder)
+  {
+    constexpr double TWO_PI = 2.0 * M_PI;
+    return (static_cast<double>(encoder) / 8192.0) * TWO_PI;
+  }
 
 private: // 编解码函数
   uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
