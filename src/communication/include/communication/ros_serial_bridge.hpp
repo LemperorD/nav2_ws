@@ -19,7 +19,7 @@ public:
       DecoderFunc decoder,
       std::function<void(const uint8_t*, size_t)> serial_sender,
       std::function<const uint8_t*(void)> serial_receiver,
-      uint8_t* payload)
+      const uint8_t* payload)
       : node_(node),
         encoder_(encoder),
         decoder_(decoder),
@@ -33,7 +33,7 @@ public:
       sub_ = node_->create_subscription<RosMsgT>(
         ros_topic_name, qos,
         [this](const typename RosMsgT::SharedPtr msg){
-          payload_= encoder_(*msg);
+          payload_ = encoder_(*msg);
           serial_sender_(payload_, 26);
         });
     }
@@ -42,11 +42,11 @@ public:
       recv_thread_ = std::thread([this]() {
         rclcpp::Rate r(200); // 200Hz = 5ms
         while (rclcpp::ok()) {
-            payload_ = serial_receiver_();
-            if (!payload_) continue;
-            RosMsgT msg = decoder_(payload_);
-            pub_->publish(msg);
-            r.sleep();
+          payload_ = serial_receiver_();
+          if (!payload_) continue;
+          RosMsgT msg = decoder_(payload_);
+          pub_->publish(msg);
+          r.sleep();
         }
       });
     }
@@ -58,7 +58,6 @@ public:
       recv_thread_.join();
     }
     if (payload_) {
-      delete[] payload_;
       payload_ = nullptr;
     }
   }
@@ -72,7 +71,7 @@ private:
   typename rclcpp::Publisher<RosMsgT>::SharedPtr pub_;
   std::thread recv_thread_;
   typename rclcpp::Subscription<RosMsgT>::SharedPtr sub_;
-  uint8_t* payload_;
+  const uint8_t* payload_ = nullptr;
 };
 
 #endif // ROS_SERIAL_BRIDGE_HPP

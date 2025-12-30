@@ -27,6 +27,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       std::bind(&BridgeNode::encodeTwist, this, std::placeholders::_1),
       nullptr,
       std::bind(&SerialCommunicationClass::sendDataFrame, com_.get(), std::placeholders::_1, std::placeholders::_2),
+      nullptr,
       nullptr
     );
 
@@ -36,7 +37,8 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       nullptr,
       std::bind(&BridgeNode::decodeYaw, this, std::placeholders::_1),
       nullptr,
-      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get())
+      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get()),
+      nullptr
     );
 
   bridge_TESspeed_mcu_ = std::make_shared<RosSerialBridge
@@ -45,7 +47,8 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       nullptr,
       std::bind(&BridgeNode::decodeTESspeed, this, std::placeholders::_1),
       nullptr,
-      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get())
+      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get()),
+      nullptr
     );
 
   gimbal_vision_timer_ = this->create_wall_timer(
