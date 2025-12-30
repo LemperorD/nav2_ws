@@ -59,6 +59,25 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
     });
 }
 
+BridgeNode::~BridgeNode()
+{
+  RCLCPP_INFO(this->get_logger(), "BridgeNode shutting down...");
+
+  if (gimbal_vision_timer_) {
+    gimbal_vision_timer_.reset();
+  }
+
+  bridge_twist_pc_.reset();
+  bridge_Yaw_mcu_.reset();
+  bridge_TESspeed_mcu_.reset();
+
+  chassis_mode_sub_.reset();
+
+  com_.reset();
+
+  RCLCPP_INFO(this->get_logger(), "BridgeNode shutdown complete.");
+}
+
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
   float vx = static_cast<float>(msg.linear.x);

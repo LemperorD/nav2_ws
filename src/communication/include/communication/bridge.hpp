@@ -26,6 +26,7 @@ class BridgeNode : public rclcpp::Node
 {
 public:
   explicit BridgeNode(const rclcpp::NodeOptions & options);
+  ~BridgeNode() override;
 
 private: // 编解码函数
   uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);

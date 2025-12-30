@@ -3,6 +3,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <functional>
+#include <atomic>
 
 template<typename RosMsgT>
 class RosSerialBridge {
@@ -13,16 +14,18 @@ public:
   RosSerialBridge(
       rclcpp::Node* node,
       const std::string& ros_topic_name,
-      bool ros_to_serial,// true: ROS → 电控, 反之为false
+      bool ros_to_serial,// true: ROS → MCU, 反之为false
       EncoderFunc encoder,
       DecoderFunc decoder,
       std::function<void(const uint8_t*, size_t)> serial_sender,
-      std::function<const uint8_t*(void)> serial_receiver)
+      std::function<const uint8_t*(void)> serial_receiver,
+      uint8_t* payload)
       : node_(node),
         encoder_(encoder),
         decoder_(decoder),
         serial_sender_(serial_sender),
-        serial_receiver_(serial_receiver)
+        serial_receiver_(serial_receiver),
+        payload_(payload)
   {
     auto qos = rclcpp::QoS(10);
 
@@ -30,23 +33,33 @@ public:
       sub_ = node_->create_subscription<RosMsgT>(
         ros_topic_name, qos,
         [this](const typename RosMsgT::SharedPtr msg){
-          const uint8_t* payload = encoder_(*msg);
-          serial_sender_(payload, 26);
-          delete[] payload;
+          payload_= encoder_(*msg);
+          serial_sender_(payload_, 26);
         });
     }
     else {
       pub_ = node_->create_publisher<RosMsgT>(ros_topic_name, qos);
       recv_thread_ = std::thread([this]() {
-      rclcpp::Rate r(200); // 200Hz = 5ms
+        rclcpp::Rate r(200); // 200Hz = 5ms
         while (rclcpp::ok()) {
-            const uint8_t* payload = serial_receiver_();
-            if (!payload) continue;
-            RosMsgT msg = decoder_(payload);
+            payload_ = serial_receiver_();
+            if (!payload_) continue;
+            RosMsgT msg = decoder_(payload_);
             pub_->publish(msg);
             r.sleep();
         }
       });
+    }
+  }
+
+  ~RosSerialBridge()
+  {
+    if (recv_thread_.joinable()) {
+      recv_thread_.join();
+    }
+    if (payload_) {
+      delete[] payload_;
+      payload_ = nullptr;
     }
   }
 
@@ -59,6 +72,7 @@ private:
   typename rclcpp::Publisher<RosMsgT>::SharedPtr pub_;
   std::thread recv_thread_;
   typename rclcpp::Subscription<RosMsgT>::SharedPtr sub_;
+  uint8_t* payload_;
 };
 
 #endif // ROS_SERIAL_BRIDGE_HPP
