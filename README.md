@@ -124,6 +124,8 @@ sudo ldconfig
 
 ## 7. 针对实车的小修改
 
+由于今年的哨兵采用双上位机，视觉与导航的代码相分离，所以``pb2025_rm_vision``在实车中完全无用，当上位机没有``openvino``与``tensorrt``环境时需要进行一定修改才能通过编译，修改过程如下：
+
 - 删除``armor_detect_openvino``和``armor_detect_tensorrt``两个功能包
 - 在``src/pb2025_rm_vision/pb2025_vision_bringup/CMakeLists.txt``中注释掉``model``的安装部分，即：
 ```cmake
@@ -135,14 +137,14 @@ ament_auto_package(
   rviz
 )
 ```
+- 接下来的实车代码维护记得***不要提交视觉子模块***即可
 
 ## 8. 编译
 
-如果安装了MVS，请在**编译**和**运行导航**前运行
-
-```bash
-export LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib
-```
+> 如果安装了MVS，请在**编译**和**运行导航**前运行
+> ```bash
+> export LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib
+> ```
 
 上述步骤已经将所需的都安装好了，可以开始编译了。
 
