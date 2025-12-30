@@ -1,2 +1,12 @@
 /**:
   ros__parameters:
+    mode: "sine"          # constant | sine | stop
+
+    # 常值模式
+    constant_linear: 0.3
+    constant_angular: 0.2
+
+    # 正弦模式
+    amplitude_linear: 0.5
+    amplitude_angular: 0.5
+    frequency: 0.2        # Hz

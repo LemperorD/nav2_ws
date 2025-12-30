@@ -32,9 +32,9 @@ ament_target_dependencies(bridge_node
   tf2_ros
 )
 
-add_executable(cmdvel_sine_pub src/cmdvel_sine_pub.cpp)
-ament_target_dependencies(cmdvel_sine_pub rclcpp geometry_msgs)
-install(TARGETS cmdvel_sine_pub DESTINATION lib/${PROJECT_NAME})
+add_executable(cmd_vel_test_node src/cmd_vel_test.cpp)
+ament_target_dependencies(cmd_vel_test_node rclcpp geometry_msgs)
+install(TARGETS cmd_vel_test_node DESTINATION lib/${PROJECT_NAME})
 
 install(TARGETS communication bridge_node
   ARCHIVE DESTINATION lib
