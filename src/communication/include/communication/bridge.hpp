@@ -9,6 +9,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/u_int8.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
 #include "communication/ros_serial_bridge.hpp"
@@ -65,7 +66,7 @@ private:
 
   // 多输入/输出的额外sub/pub可在此添加
   // Additional sub/pub for multi-input/output can be added here
-  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr chassis_mode_sub_;
+  rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr chassis_mode_sub_;
 
   // 多输入/输出所使用的成员变量可在此添加
   // Member variables used for multi-input/output can be added here

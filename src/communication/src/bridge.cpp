@@ -55,9 +55,9 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   std::chrono::milliseconds(30),
   std::bind(&BridgeNode::publishTransformGimbalVision, this));
 
-  chassis_mode_sub_ = this->create_subscription<std_msgs::msg::Float64>(
+  chassis_mode_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
     "/chassis_mode", 10,
-    [this](const std_msgs::msg::Float64::SharedPtr msg) {
+    [this](const std_msgs::msg::UInt8::SharedPtr msg) {
       chassis_mode_ = static_cast<uint8_t>(msg->data);
     });
 }
