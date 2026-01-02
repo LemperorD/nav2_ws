@@ -92,8 +92,8 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 
   uint8_t* payload = new uint8_t[26]();
 
-  // payload[0] = chassisFollowed; //默认为底盘跟随模式
-  payload[0] = littleTES; //默认为小陀螺模式
+  payload[0] = chassisFollowed; //默认为底盘跟随模式
+  // payload[0] = littleTES; //默认为小陀螺模式
   // payload[0] = chasis_mode_; //由上层行为树控制底盘模式
 
   com_->writeFloatLE(&payload[1], angle_init_); // TODO: get from relocalization TF

@@ -35,7 +35,12 @@ public: // 大Yaw电机编码值解码
   inline double encoderToRad(float encoder)
   {
     constexpr double TWO_PI = 2.0 * M_PI;
-    return (static_cast<double>(encoder) / 8192.0) * TWO_PI;
+    float out = (static_cast<double>(encoder) / 8192.0) * TWO_PI;
+    if (out > TWO_PI)
+      out -= TWO_PI;
+    else if (out < 0.0)
+      out += TWO_PI;
+    return out;
   }
 
 private: // 编解码函数
