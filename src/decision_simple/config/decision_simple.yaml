@@ -1,2 +1,52 @@
-/**:
-    ros__parameters:
+decision_simple:
+  ros__parameters:
+    scenario: "main"           # main / test_attack_pose / test_attacked_feedback / test_is_detect_enemy
+    require_game_running: false
+
+    # referee topics（fake_referee 默认就是这些）
+    referee_robot_status_topic: "referee/robot_status"
+    referee_game_status_topic:  "referee/game_status"
+    referee_rfid_status_topic:  "referee/rfid_status"
+
+    # nav2 goal_pose
+    goal_pose_topic: "goal_pose"
+    debug_attack_pose_topic: "debug_attack_pose"
+    frame_id: "map"
+
+    # chassis & motion
+    chassis_mode_topic: "chassis_mode"
+    cmd_spin_topic: "cmd_spin"
+    cmd_vel_topic: "cmd_vel"
+    cmd_gimbal_topic: "cmd_gimbal"
+    sub_mode_topic: "sub_mode"
+
+    # costmap / vision（你们有就接，没有也不影响补给/默认逻辑）
+    nav_globalCostmap_topic: "global_costmap/costmap"
+    detector_armors_topic: "detector/armors"
+    tracker_target_topic: "tracker/target"
+
+    # goals（来自 XML）
+    supply_x: 0.0
+    supply_y: 0.0
+    supply_yaw: 0.0
+
+    default_x: 4.65
+    default_y: -3.5
+    default_yaw: 0.0
+
+    # thresholds（来自 XML）
+    ammo_min: 0
+    heat_ok_default: 350
+    hp_survival_enter: 120
+    hp_survival_exit: 300
+    heat_supply_done: 100
+    hp_supply_done: 399
+
+    combat_max_distance: 8.0
+    combat_cooldown_sec: 3.0
+
+    default_goal_hz: 5.0
+    tick_hz: 20.0
+    spin_speed: 7.0
+
+    enable_attacked_feedback: false
