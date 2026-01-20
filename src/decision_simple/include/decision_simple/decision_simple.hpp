@@ -1,30 +1,19 @@
 #pragma once
 
-#include <chrono>
+#include <mutex>
 #include <optional>
 #include <string>
-#include <vector>
 
+#include "rcl/time.h"
 #include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
 
-#include "std_msgs/msg/int32.hpp"
-#include "std_msgs/msg/bool.hpp"
-#include "std_msgs/msg/float64.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/twist.hpp"
-#include "geometry_msgs/msg/vector3.hpp"
-#include "nav_msgs/msg/occupancy_grid.hpp"
-
 #include "pb_rm_interfaces/msg/robot_status.hpp"
-#include "pb_rm_interfaces/msg/game_status.hpp"
-#include "pb_rm_interfaces/msg/rfid_status.hpp"
-#include "nav2_msgs/msg/costmap.hpp"
+#include "std_msgs/msg/u_int8.hpp"
 
-// auto_aim_interfaces 可能不是每个环境都有：CMake 会做 QUIET 探测
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-  #include "auto_aim_interfaces/msg/armors.hpp"
-  #include "auto_aim_interfaces/msg/target.hpp"
+#include "auto_aim_interfaces/msg/armors.hpp"
+#include "auto_aim_interfaces/msg/target.hpp"
 #endif
 
 namespace decision_simple
@@ -36,142 +25,76 @@ public:
   explicit DecisionSimple(const rclcpp::NodeOptions & options);
 
 private:
-  // ====== “BT节点”同名能力：条件 ======
-  bool IsStatusOK(int ammo_min, int heat_max, int hp_min) const;
-  bool IsGameStatus(int expected_progress, int min_remain, int max_remain) const;
-  bool IsRfidDetected_FriendlySupplyNonExchange() const;
-  bool IsCombatCooldownReady() const;
-  bool IsAttacked(uint8_t & armor_id_out) const;
+  enum class State : uint8_t { DEFAULT = 1, ATTACK = 2, SUPPLY = 3 };
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-  bool IsDetectEnemy() const;
-#endif
-
-  // ====== “BT节点”同名能力：动作 ======
-  void SetChassisMode(int mode);
-  void PublishSpinSpeed(double spin_speed);
-  void PubNav2Goal(const geometry_msgs::msg::PoseStamped & goal);
-  void PubNav2GoalXYZYaw(double x, double y, double yaw);
-  void PublishTwistFor(const geometry_msgs::msg::Twist & tw, std::chrono::milliseconds dur);
-  void PublishGimbalAbsoluteFor(double yaw, double pitch, std::chrono::milliseconds dur);
-
-  // ====== CalculateAttackPose 的代码版 ======
-  bool CalculateAttackPose(geometry_msgs::msg::PoseStamped & attack_pose_out);
-
-  // ====== 对应 BT 子树：rmul_supply / Execute / ModeSelect / SubmodeCheck ======
-  void tickMain();               // 对应 Main
-  void SubmodeCheck();           // 对应 SubmodeCheck
-  void ModeSelect();             // 对应 ModeSelect
-  void Execute();                // 对应 Execute
-  void rmul_supply();            // 对应 rmul_supply
-
-  // ====== test_* 场景（可选） ======
-  void tickTest();               // 根据参数 scenario 选择 test_* 行为
-  void test_attack_pose();
-  void test_attacked_feedback();
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-  void test_is_detect_enemy();
-#endif
-
-  // ====== ROS 回调 ======
+  // callbacks
   void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
-  void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
-  void onRfidStatus(const pb_rm_interfaces::msg::RfidStatus::SharedPtr msg);
-  void onSubMode(const std_msgs::msg::Bool::SharedPtr msg);
-  void onCostmap(const nav2_msgs::msg::Costmap::SharedPtr msg);
-
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
   void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
 #endif
 
-  // ====== 工具 ======
+  // tick
+  void tick();
+
+  // helpers
+  bool isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs) const;
+  bool isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus & rs) const;
+
   geometry_msgs::msg::PoseStamped makePoseXYZYaw(const std::string & frame, double x, double y, double yaw) const;
 
-  // ====== 参数（尽量沿用 XML 命名） ======
-  std::string referee_robot_status_topic_;
-  std::string referee_game_status_topic_;
-  std::string referee_rfid_status_topic_;
-
-  std::string goal_pose_topic_;
-  std::string debug_attack_pose_topic_;
-
-  std::string chassis_mode_topic_;
-  std::string cmd_spin_topic_;
-  std::string cmd_vel_topic_;
-  std::string cmd_gimbal_topic_;
-
-  std::string sub_mode_topic_;
-  std::string nav_globalCostmap_topic_;
-
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-  std::string detector_armors_topic_;
-  std::string tracker_target_topic_;
+  bool detectEnemy(const auto_aim_interfaces::msg::Armors & armors,
+                   const std::optional<auto_aim_interfaces::msg::Target> & target_opt) const;
+
+  bool buildAttackGoal(geometry_msgs::msg::PoseStamped & out,
+                       const auto_aim_interfaces::msg::Armors & armors,
+                       const std::optional<auto_aim_interfaces::msg::Target> & target_opt) const;
 #endif
 
-  // goals（XML 固定值）
-  std::string frame_id_;
-  double supply_x_, supply_y_, supply_yaw_;                 // 0,0,0
-  double default_x_, default_y_, default_yaw_;              // 4.65,-3.5,0
+  void setState(State s);
+  void publishChassisMode(uint8_t mode);
+  void publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz);
 
-  // 阈值（来自 XML）
-  int hp_survival_enter_;      // 120
-  int hp_survival_exit_;       // 300
-  int hp_supply_done_;         // 399
-  int heat_ok_default_;        // 350
-  int heat_supply_done_;       // 100
-  int ammo_min_;               // 0
+  // params
+  std::string frame_id_{"map"};
 
-  double combat_max_distance_; // 8.0
-  double combat_cooldown_sec_; // 3.0
+  std::string robot_status_topic_{"referee/robot_status"};
+  std::string goal_pose_topic_{"goal_pose"};
 
-  double default_goal_hz_;     // 5.0
-  double tick_hz_;             // 20.0
-  double spin_speed_;          // 7.0
+  // 你 bridge.cpp 订阅的是绝对话题 "/chassis_mode"
+  std::string chassis_mode_topic_{"/chassis_mode"};
 
-  bool require_game_running_;  // 是否强制 RUNNING 才执行（XML不强制，但你可选）
-  std::string scenario_;       // "main" 或 "test_*"
-  bool enable_attacked_feedback_;
-
-  // ====== 状态（黑板变量） ======
-  int current_mode_{-1};
-  double combat_cooldown_ready_time_{0.0}; // steady_clock seconds
-  bool sub_mode_{false};
-
-  // ====== 最新裁判/传感数据 ======
-  pb_rm_interfaces::msg::RobotStatus last_robot_status_;
-  pb_rm_interfaces::msg::GameStatus  last_game_status_;
-  pb_rm_interfaces::msg::RfidStatus  last_rfid_status_;
-  bool has_robot_status_{false};
-  bool has_game_status_{false};
-  bool has_rfid_status_{false};
-
-  nav2_msgs::msg::Costmap last_costmap_;
-
-  bool has_costmap_{false};
+  // 可选调试：可视化攻击点
+  std::string debug_attack_pose_topic_{"debug_attack_pose"};
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-  auto_aim_interfaces::msg::Armors last_armors_;
-  bool has_armors_{false};
-
-  auto_aim_interfaces::msg::Target last_target_;
-  bool has_target_{false};
+  std::string detector_armors_topic_{"detector/armors"};
+  std::string tracker_target_topic_{"tracker/target"};
 #endif
 
-  // ====== 发布器/订阅器 ======
-  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr chassis_mode_pub_;
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr cmd_spin_pub_;
+  double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
+  double default_x_{4.65}, default_y_{-3.5}, default_yaw_{0.0};
+
+  int hp_enter_supply_{120};
+  int hp_exit_supply_{300};   // 退出补给阈值（回到默认/攻击）
+  int ammo_min_{0};
+
+  double combat_max_distance_{8.0};
+  double attack_hold_sec_{1.0};
+
+  double tick_hz_{20.0};
+  double default_goal_hz_{2.0};
+  double supply_goal_hz_{2.0};
+  double attack_goal_hz_{10.0};
+
+  // pubs/subs
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose_pub_;
+  rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr chassis_mode_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr debug_attack_pose_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr cmd_gimbal_pub_;
 
   rclcpp::Subscription<pb_rm_interfaces::msg::RobotStatus>::SharedPtr robot_status_sub_;
-  rclcpp::Subscription<pb_rm_interfaces::msg::GameStatus>::SharedPtr game_status_sub_;
-  rclcpp::Subscription<pb_rm_interfaces::msg::RfidStatus>::SharedPtr rfid_status_sub_;
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_mode_sub_;
-  rclcpp::Subscription<nav2_msgs::msg::Costmap>::SharedPtr costmap_sub_;
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   rclcpp::Subscription<auto_aim_interfaces::msg::Armors>::SharedPtr armors_sub_;
@@ -180,10 +103,26 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
 
-  // ====== attacked_feedback 的动作序列状态机 ======
-  enum class AttackSeqState { IDLE, GIMBAL, TW1, TW2, TW3 };
-  AttackSeqState attack_seq_state_{AttackSeqState::IDLE};
-  rclcpp::Time attack_seq_deadline_;
+  // cache/state
+  mutable std::mutex mtx_;
+  pb_rm_interfaces::msg::RobotStatus last_robot_status_{};
+  bool has_robot_status_{false};
+
+#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
+  auto_aim_interfaces::msg::Armors last_armors_{};
+  bool has_armors_{false};
+  std::optional<auto_aim_interfaces::msg::Target> last_target_opt_;
+#endif
+
+  State state_{State::DEFAULT};
+
+  rclcpp::Time last_default_pub_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time last_supply_pub_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time last_attack_pub_{0, 0, RCL_ROS_TIME};
+
+  rclcpp::Time last_enemy_seen_{0, 0, RCL_ROS_TIME};
+  geometry_msgs::msg::PoseStamped last_attack_goal_{};
+  bool has_last_attack_goal_{false};
 };
 
-} // namespace decision_simple
+}  // namespace decision_simple
