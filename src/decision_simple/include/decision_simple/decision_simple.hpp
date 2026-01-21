@@ -8,13 +8,25 @@
 #include "rclcpp/rclcpp.hpp"
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"          
 #include "pb_rm_interfaces/msg/robot_status.hpp"
 #include "std_msgs/msg/u_int8.hpp"
+
+#include "tf2_ros/buffer.h"                                 
+#include "tf2_ros/transform_listener.h"                     
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
 #endif
+
+
+typedef enum
+{
+  chassisFollowed = 1,
+  littleTES,
+  goHome,
+} chassisMode;
 
 namespace decision_simple
 {
@@ -53,20 +65,26 @@ private:
                        const std::optional<auto_aim_interfaces::msg::Target> & target_opt) const;
 #endif
 
+  // ====== chassis mode & arrival / attacked helpers ======
+  bool getRobotPoseMap(double & x, double & y, double & yaw) ;      
+  bool isNear(double gx, double gy, double tol_xy) ;             
+
   void setState(State s);
-  void publishChassisMode(uint8_t mode);
+
+  void publishChassisMode(chassisMode mode);                            
+  void setChassisMode(chassisMode mode);                                
+
   void publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz);
 
   // params
   std::string frame_id_{"map"};
+  std::string base_frame_id_{"base_link"};                              
 
   std::string robot_status_topic_{"referee/robot_status"};
   std::string goal_pose_topic_{"goal_pose"};
 
-  // 你 bridge.cpp 订阅的是绝对话题 "/chassis_mode"
   std::string chassis_mode_topic_{"/chassis_mode"};
 
-  // 可选调试：可视化攻击点
   std::string debug_attack_pose_topic_{"debug_attack_pose"};
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
@@ -77,12 +95,19 @@ private:
   double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
   double default_x_{4.65}, default_y_{-3.5}, default_yaw_{0.0};
 
+
+  double default_arrive_xy_tol_{0.30};
+  double supply_arrive_xy_tol_{0.30};
+
   int hp_enter_supply_{120};
-  int hp_exit_supply_{300};   // 退出补给阈值（回到默认/攻击）
+  int hp_exit_supply_{300};
   int ammo_min_{0};
 
   double combat_max_distance_{8.0};
   double attack_hold_sec_{1.0};
+
+
+  double attacked_hold_sec_{1.5};
 
   double tick_hz_{20.0};
   double default_goal_hz_{2.0};
@@ -103,6 +128,10 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
 
+
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
   // cache/state
   mutable std::mutex mtx_;
   pb_rm_interfaces::msg::RobotStatus last_robot_status_{};
@@ -116,6 +145,9 @@ private:
 
   State state_{State::DEFAULT};
 
+  // 当前底盘模式缓存
+  chassisMode current_chassis_mode_{chassisFollowed};
+
   rclcpp::Time last_default_pub_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_supply_pub_{0, 0, RCL_ROS_TIME};
   rclcpp::Time last_attack_pub_{0, 0, RCL_ROS_TIME};
@@ -123,6 +155,9 @@ private:
   rclcpp::Time last_enemy_seen_{0, 0, RCL_ROS_TIME};
   geometry_msgs::msg::PoseStamped last_attack_goal_{};
   bool has_last_attack_goal_{false};
+
+  // 最近一次被打时间（RobotStatus.is_hp_deduced）
+  rclcpp::Time last_attacked_{0, 0, RCL_ROS_TIME};
 };
 
 }  // namespace decision_simple
