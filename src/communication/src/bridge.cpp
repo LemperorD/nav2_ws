@@ -56,7 +56,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   std::bind(&BridgeNode::publishTransformGimbalVision, this));
 
   chassis_mode_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
-    "/chassis_mode", 10,
+    "chassis_mode", 10,
     [this](const std_msgs::msg::UInt8::SharedPtr msg) {
       chassis_mode_ = static_cast<uint8_t>(msg->data);
     });

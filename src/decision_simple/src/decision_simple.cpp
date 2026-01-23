@@ -21,7 +21,7 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   robot_status_topic_ = this->declare_parameter<std::string>("referee_robot_status_topic", "referee/robot_status");
   goal_pose_topic_    = this->declare_parameter<std::string>("goal_pose_topic", "goal_pose");
 
-  chassis_mode_topic_ = this->declare_parameter<std::string>("chassis_mode_topic", "/chassis_mode");
+  chassis_mode_topic_ = this->declare_parameter<std::string>("chassis_mode_topic", "chassis_mode");
   debug_attack_pose_topic_ = this->declare_parameter<std::string>("debug_attack_pose_topic", "debug_attack_pose");
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM

@@ -83,7 +83,7 @@ private:
   std::string robot_status_topic_{"referee/robot_status"};
   std::string goal_pose_topic_{"goal_pose"};
 
-  std::string chassis_mode_topic_{"/chassis_mode"};
+  std::string chassis_mode_topic_{"chassis_mode"};
 
   std::string debug_attack_pose_topic_{"debug_attack_pose"};
 
