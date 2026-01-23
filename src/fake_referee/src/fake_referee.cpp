@@ -1,6 +1,10 @@
 #include "fake_referee/fake_referee.hpp"
 
-namespace fake_referee{
+#include <chrono>   
+#include <sstream>  
+
+namespace fake_referee {
+
 FakeRefereeNode::FakeRefereeNode(const rclcpp::NodeOptions & options)
 : Node("fake_referee_node", options)
 {
@@ -16,11 +20,13 @@ FakeRefereeNode::FakeRefereeNode(const rclcpp::NodeOptions & options)
     robot_status_pub_ = this->create_publisher<pb_rm_interfaces::msg::RobotStatus>("referee/robot_status", 20);
 
     //创建订阅器
-    robot_status_sub_ = this->create_subscription<rmoss_interfaces::msg::RobotStatus>
-    ("/referee_system/red_standard_robot1/robot_status", 10, std::bind(&FakeRefereeNode::SubRobotStatus, this, std::placeholders::_1));
+    robot_status_sub_ = this->create_subscription<rmoss_interfaces::msg::RobotStatus>(
+        "/referee_system/red_standard_robot1/robot_status", 10,
+        std::bind(&FakeRefereeNode::SubRobotStatus, this, std::placeholders::_1));
 
-    attack_info_sub_ = this->create_subscription<std_msgs::msg::String>
-    ("/referee_system/attack_info", 10, std::bind(&FakeRefereeNode::SubAttackInfo, this, std::placeholders::_1));
+    attack_info_sub_ = this->create_subscription<std_msgs::msg::String>(
+        "/referee_system/attack_info", 10,
+        std::bind(&FakeRefereeNode::SubAttackInfo, this, std::placeholders::_1));
 
     // 声明参数并初始化
     declareAndInitParams();
@@ -51,7 +57,9 @@ FakeRefereeNode::FakeRefereeNode(const rclcpp::NodeOptions & options)
     );
 }
 
-std::vector<std::string> split(const std::string &str, char delim) {
+// ============================ helpers (仍然在 fake_referee namespace 内) ============================
+static std::vector<std::string> split_str(const std::string &str, char delim)  // [MOD] 改名避免和类成员 split 混淆
+{
     std::vector<std::string> tokens;
     std::stringstream ss(str);
     std::string item;
@@ -63,30 +71,25 @@ std::vector<std::string> split(const std::string &str, char delim) {
 
 using AttackInfo = std::tuple<std::string, std::string, std::string, std::string>;
 
-std::optional<AttackInfo> parse_attack_info(const std::string &attack_str) {
-    auto info = split(attack_str, ',');
-    if (info.size() < 2) {
-        return std::nullopt;
-    }
+static std::optional<AttackInfo> parse_attack_info(const std::string &attack_str)
+{
+    auto info = split_str(attack_str, ',');
+    if (info.size() < 2) return std::nullopt;
 
-    auto shooter = split(info[0], '/');
-    if (shooter.size() != 2) {
-        return std::nullopt;
-    }
+    auto shooter = split_str(info[0], '/');
+    if (shooter.size() != 2) return std::nullopt;
+
     std::string shooter_model_name = shooter[0];
     std::string shooter_name = shooter[1];
 
-    auto target = split(info[1], '/');
-    if (target.size() != 4) {
-        return std::nullopt;
-    }
+    auto target = split_str(info[1], '/');
+    if (target.size() != 4) return std::nullopt;
+
     std::string target_model_name = target[1];
     std::string target_link_name = target[2];
     std::string target_collision_name = target[3];
 
-    if (target_collision_name != "target_collision") {
-        return std::nullopt;
-    }
+    if (target_collision_name != "target_collision") return std::nullopt;
 
     return std::make_tuple(shooter_model_name, shooter_name, target_model_name, target_link_name);
 }
@@ -148,25 +151,22 @@ void FakeRefereeNode::PublishGameStatus()
 void FakeRefereeNode::PublishGroundRobotPosition()
 {
     pb_rm_interfaces::msg::GroundRobotPosition msg;
-    // 设置英雄机器人位置
     msg.hero_position.x = ground_robot_position_cfg_.hero_x;
     msg.hero_position.y = ground_robot_position_cfg_.hero_y;
     msg.hero_position.z = ground_robot_position_cfg_.hero_z;
-    
-    // 设置工程机器人位置
+
     msg.engineer_position.x = ground_robot_position_cfg_.engineer_x;
     msg.engineer_position.y = ground_robot_position_cfg_.engineer_y;
     msg.engineer_position.z = ground_robot_position_cfg_.engineer_z;
-    
-    // 设置3号步兵机器人位置
+
     msg.standard_3_position.x = ground_robot_position_cfg_.standard3_x;
     msg.standard_3_position.y = ground_robot_position_cfg_.standard3_y;
     msg.standard_3_position.z = ground_robot_position_cfg_.standard3_z;
-    
-    // 设置4号步兵机器人位置
+
     msg.standard_4_position.x = ground_robot_position_cfg_.standard4_x;
     msg.standard_4_position.y = ground_robot_position_cfg_.standard4_y;
     msg.standard_4_position.z = ground_robot_position_cfg_.standard4_z;
+
     ground_robot_position_pub_->publish(msg);
 }
 
@@ -196,14 +196,14 @@ void FakeRefereeNode::PublishRfidStatus()
     msg.friendly_supply_zone_exchange = rfid_status_cfg_.friendly_supply_zone_exchange;
     msg.friendly_big_resource_island = rfid_status_cfg_.friendly_big_resource_island;
     msg.enemy_big_resource_island = rfid_status_cfg_.enemy_big_resource_island;
-    // msg.center_gain_point = rfid_status_cfg_.center_gain_point;
-    if (rst_pb.translation[0]<1 && rst_pb.translation[0]>-1 &&
-        rst_pb.translation[1]<1 && rst_pb.translation[1]>-1){
+
+    if (rst_pb.translation[0] < 1 && rst_pb.translation[0] > -1 &&
+        rst_pb.translation[1] < 1 && rst_pb.translation[1] > -1) {
         msg.center_gain_point = DETECTED;
-    }
-    else{
+    } else {
         msg.center_gain_point = NOT_DETECTED;
     }
+
     rfid_status_pub_->publish(msg);
 }
 
@@ -287,7 +287,7 @@ void FakeRefereeNode::declareAndInitParams()
     this->declare_parameter("rfid_status.enemy_big_resource_island", false);
     this->declare_parameter("rfid_status.center_gain_point", false);
 
-    //rst_pb
+    // rst_pb
     this->declare_parameter<int>("robot_id", 1);
     this->declare_parameter<int>("robot_level", 1);
     this->declare_parameter<int>("current_hp", 500);
@@ -307,6 +307,11 @@ void FakeRefereeNode::declareAndInitParams()
     this->declare_parameter<double>("rotation_w", 1.0);
     this->declare_parameter<int>("remaining_gold_coin", 0);
     this->declare_parameter<bool>("is_hp_deduced", false);
+
+    // [MOD] 新增控制参数（核心）
+    this->declare_parameter<bool>("use_external_robot_status", true);
+    this->declare_parameter<bool>("lock_hp_to_param", true);
+    this->declare_parameter<bool>("clear_damage_flags_after_publish", true);
 
     updateParams();
 }
@@ -391,7 +396,7 @@ void FakeRefereeNode::updateParams()
     rfid_status_cfg_.enemy_big_resource_island = this->get_parameter("rfid_status.enemy_big_resource_island").as_bool();
     rfid_status_cfg_.center_gain_point = this->get_parameter("rfid_status.center_gain_point").as_bool();
 
-    //rst_pb
+    // rst_pb
     rst_pb.robot_id = this->get_parameter("robot_id").as_int();
     rst_pb.robot_level = this->get_parameter("robot_level").as_int();
     rst_pb.current_hp = this->get_parameter("current_hp").as_int();
@@ -414,6 +419,11 @@ void FakeRefereeNode::updateParams()
 
     rst_pb.remaining_gold_coin = this->get_parameter("remaining_gold_coin").as_int();
     rst_pb.is_hp_deduced = this->get_parameter("is_hp_deduced").as_bool();
+
+    // [MOD] 读取新增控制参数
+    use_external_robot_status_ = this->get_parameter("use_external_robot_status").as_bool();
+    lock_hp_to_param_ = this->get_parameter("lock_hp_to_param").as_bool();
+    clear_damage_flags_after_publish_ = this->get_parameter("clear_damage_flags_after_publish").as_bool();
 }
 
 void FakeRefereeNode::PublishRobotStatus()
@@ -421,69 +431,109 @@ void FakeRefereeNode::PublishRobotStatus()
     pb_rm_interfaces::msg::RobotStatus msg;
     msg.robot_id = rst_pb.robot_id;
     msg.robot_level = rst_pb.robot_level;
-    msg.current_hp = rst_pb.current_hp;
-    msg.maximum_hp = rst_pb.maximum_hp;
+
+    // [MOD] 关键：若 lock_hp_to_param_=true，则发布时强制从参数取血量（不会被订阅回调覆盖）
+    if (lock_hp_to_param_) {
+        msg.current_hp = this->get_parameter("current_hp").as_int();
+        msg.maximum_hp = this->get_parameter("maximum_hp").as_int();
+    } else {
+        msg.current_hp = rst_pb.current_hp;
+        msg.maximum_hp = rst_pb.maximum_hp;
+    }
+
+    // [MOD] 补全这些字段（你 echo 里一直是 0，就是因为原来没赋值）
+    msg.shooter_barrel_cooling_value = rst_pb.shooter_barrel_cooling_value;
+    msg.shooter_barrel_heat_limit = rst_pb.shooter_barrel_heat_limit;
+    msg.shooter_17mm_1_barrel_heat = rst_pb.shooter_17mm_1_barrel_heat;
+    msg.remaining_gold_coin = rst_pb.remaining_gold_coin;
+
     msg.robot_pos.position.x = rst_pb.translation[0];
     msg.robot_pos.position.y = rst_pb.translation[1];
     msg.robot_pos.position.z = rst_pb.translation[2];
-    // RCLCPP_INFO(get_logger(),"pub translation:%f, %f, %f",msg.robot_pos.position.x, msg.robot_pos.position.y, msg.robot_pos.position.z);
+
     msg.robot_pos.orientation.x = rst_pb.rotation[0];
     msg.robot_pos.orientation.y = rst_pb.rotation[1];
     msg.robot_pos.orientation.z = rst_pb.rotation[2];
     msg.robot_pos.orientation.w = rst_pb.rotation[3];
+
     msg.armor_id = rst_pb.armor_id;
     msg.hp_deduction_reason = rst_pb.hp_deduction_reason;
     msg.is_hp_deduced = rst_pb.is_hp_deduced;
     msg.projectile_allowance_17mm = rst_pb.projectile_allowance_17mm;
+
     robot_status_pub_->publish(msg);
+
+    // [MOD] 默认把扣血标志当成脉冲：发一次就清零，避免 decision 一直认为在掉血
+    if (clear_damage_flags_after_publish_ && rst_pb.is_hp_deduced) {
+        rst_pb.is_hp_deduced = false;
+        rst_pb.hp_deduction_reason = 0;
+        rst_pb.armor_id = 0;
+    }
 }
 
 void FakeRefereeNode::SubRobotStatus(const rmoss_interfaces::msg::RobotStatus::SharedPtr msg)
 {
-    // RCLCPP_INFO(get_logger(),"get translation:%f, %f, %f", msg->gt_tf.translation.x, msg->gt_tf.translation.y, msg->gt_tf.translation.z);
+    // [MOD] 可选择忽略外部裁判系统输入
+    if (!use_external_robot_status_) return;
+
     rst_pb.robot_id = msg->id;
     rst_pb.robot_level = msg->level;
-    rst_pb.current_hp = msg->remain_hp;
-    rst_pb.maximum_hp = msg->max_hp;
+
+    // [MOD] lock_hp_to_param_=true 时，不允许外部回调覆盖血量
+    if (!lock_hp_to_param_) {
+        rst_pb.current_hp = msg->remain_hp;
+        rst_pb.maximum_hp = msg->max_hp;
+    }
+
+    // 位姿仍然更新（用于 rfid 判断、导航/决策等）
     rst_pb.translation = {msg->gt_tf.translation.x, msg->gt_tf.translation.y, msg->gt_tf.translation.z};
-    // RCLCPP_INFO(get_logger(),"set translation:%f, %f, %f", rst_pb.translation[0], rst_pb.translation[1], rst_pb.translation[2]);
     rst_pb.rotation = {msg->gt_tf.rotation.x, msg->gt_tf.rotation.y, msg->gt_tf.rotation.z, msg->gt_tf.rotation.w};
 }
 
 void FakeRefereeNode::SubAttackInfo(const std_msgs::msg::String::SharedPtr msg)
 {
-    auto result = parse_attack_info(msg->data);  // msg.attack_info 是 std::string
-    if (result) {
-        auto [shooterModel, shooterName, targetModel, targetLink] = result.value();
-        RCLCPP_INFO(rclcpp::get_logger("parser"), 
-                    "Shooter: %s/%s, Target: %s/%s",
-                    shooterModel.c_str(), shooterName.c_str(),
-                    targetModel.c_str(), targetLink.c_str());
-        if (shooterModel == "red_standard_robot1")
-        {
+    auto result = parse_attack_info(msg->data);
+    if (!result) {
+        RCLCPP_WARN(rclcpp::get_logger("parser"), "Failed to parse attack info.");
+        return;
+    }
+
+    auto [shooterModel, shooterName, targetModel, targetLink] = result.value();
+    RCLCPP_INFO(rclcpp::get_logger("parser"),
+                "Shooter: %s/%s, Target: %s/%s",
+                shooterModel.c_str(), shooterName.c_str(),
+                targetModel.c_str(), targetLink.c_str());
+
+    if (shooterModel == "red_standard_robot1") {
+        // [MOD] 防止 uint16_t 下溢
+        if (rst_pb.projectile_allowance_17mm > 0) {
             rst_pb.projectile_allowance_17mm -= 1;
         }
-        if (targetModel == "red_standard_robot1")
-        {
-            rst_pb.current_hp -= 10;
-            rst_pb.is_hp_deduced = 1;
-            rst_pb.hp_deduction_reason = ARMOR_HIT;
-            const std::string prefix = "armor_";
-            if (targetLink.rfind(prefix, 0) == 0 && targetLink.size() > prefix.size()) {
-                try {
-                    rst_pb.armor_id = std::stoi(targetLink.substr(prefix.size()));
-                    RCLCPP_INFO(rclcpp::get_logger("parser"), "Armor ID: %d", rst_pb.armor_id);
-                } catch (const std::exception &e) {
-                    RCLCPP_WARN(rclcpp::get_logger("parser"), "Invalid armor ID format: %s", targetLink.c_str());
-                }
+    }
+
+    if (targetModel == "red_standard_robot1") {
+        // [MOD] 若锁血量到参数，则不在内部扣血（否则你 set 的 50 又会被这里改乱）
+        if (!lock_hp_to_param_) {
+            if (rst_pb.current_hp >= 10) rst_pb.current_hp -= 10;
+            else rst_pb.current_hp = 0;
+        }
+
+        rst_pb.is_hp_deduced = true;
+        rst_pb.hp_deduction_reason = ARMOR_HIT;
+
+        const std::string prefix = "armor_";
+        if (targetLink.rfind(prefix, 0) == 0 && targetLink.size() > prefix.size()) {
+            try {
+                rst_pb.armor_id = std::stoi(targetLink.substr(prefix.size()));
+                RCLCPP_INFO(rclcpp::get_logger("parser"), "Armor ID: %d", rst_pb.armor_id);
+            } catch (const std::exception &) {
+                RCLCPP_WARN(rclcpp::get_logger("parser"), "Invalid armor ID format: %s", targetLink.c_str());
             }
         }
-    } else {
-        RCLCPP_WARN(rclcpp::get_logger("parser"), "Failed to parse attack info.");
     }
 }
 
-}// namespace fake_referee
+} // namespace fake_referee
 
 int main(int argc, char * argv[])
 {
