@@ -1,6 +1,7 @@
 #include "communication/bridge.hpp"
 #include <algorithm>
 #include <cstring>
+#include <float.h>
 
 namespace bridge
 {
@@ -13,10 +14,12 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("port_name", "/dev/ttyACM0");
   this->declare_parameter<int>("baud_rate", 115200);
   this->declare_parameter<double>("Yaw_bias", 0.0);
+  this->declare_parameter<int>("max_dwa_size", 15);
 
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
+  this->get_parameter("max_dwa_size", max_dwa_size_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
@@ -192,7 +195,7 @@ void BridgeNode::publishTransformGimbalYaw(double Yaw)
   tf_msg.transform.translation.z = 0.0;
 
   tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, Yaw + Yaw_bias_);
+  q.setRPY(0.0, 0.0, dwa_filter(Yaw) + Yaw_bias_);
 
   tf_msg.transform.rotation.x = q.x();
   tf_msg.transform.rotation.y = q.y();
@@ -202,7 +205,17 @@ void BridgeNode::publishTransformGimbalYaw(double Yaw)
   tf_broadcaster_->sendTransform(tf_msg);
 }
 
-}// namespace bridge
+inline double BridgeNode::dwa_filter(double sample){
+  dwa_.push_back(sample);
+  if (dwa_.size() > max_dwa_size_){
+    dwa_.pop_front();
+  }
+  double sum = 0.0;
+  for(double x : dwa_) sum += x; 
+  return sum / dwa_.size();
+}
+
+} // namespace bridge
 
 int main(int argc, char** argv)
 {

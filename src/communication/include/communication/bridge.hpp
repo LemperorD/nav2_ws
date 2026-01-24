@@ -2,6 +2,7 @@
 #define BRIDGE_NODE_HPP
 
 #include <cmath>
+#include <deque>
 
 #include <rclcpp/rclcpp.hpp>
 #include "tf2_ros/buffer.h"
@@ -54,6 +55,11 @@ private: // create a frame for vision
 
 private: // generate TF from gimbal_yaw_odom to gimbal_yaw 
   void publishTransformGimbalYaw(double Yaw);
+
+private: // 滑动窗口滤波,窗口数组成员变量,窗口长度成员变量
+  inline double dwa_filter(double sample);
+  std::deque<double> dwa_;
+  int max_dwa_size_ = 15;
 
 private:
   // 参数
