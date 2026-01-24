@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ~/nav2_ws
 
 ROOT_PATH=~/nav2_ws/src/hik_camera_ros2_driver/hikSDK/bin
 
