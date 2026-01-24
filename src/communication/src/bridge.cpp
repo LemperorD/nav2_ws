@@ -12,8 +12,11 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
 {
   this->declare_parameter<std::string>("port_name", "/dev/ttyACM0");
   this->declare_parameter<int>("baud_rate", 115200);
+  this->declare_parameter<double>("Yaw_bias", 0.0);
+
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
+  this->get_parameter("Yaw_bias", Yaw_bias_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
@@ -184,14 +187,12 @@ void BridgeNode::publishTransformGimbalYaw(double Yaw)
   tf_msg.header.frame_id = "gimbal_yaw_odom";
   tf_msg.child_frame_id  = "gimbal_yaw";
 
-  // 1️⃣ 平移（yaw 关节一般不平移）
   tf_msg.transform.translation.x = 0.0;
   tf_msg.transform.translation.y = 0.0;
   tf_msg.transform.translation.z = 0.0;
 
-  // 2️⃣ 旋转（绕 Z 轴）
   tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, Yaw);
+  q.setRPY(0.0, 0.0, Yaw + Yaw_bias_);
 
   tf_msg.transform.rotation.x = q.x();
   tf_msg.transform.rotation.y = q.y();

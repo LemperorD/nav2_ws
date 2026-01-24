@@ -56,11 +56,15 @@ private: // generate TF from gimbal_yaw_odom to gimbal_yaw
   void publishTransformGimbalYaw(double Yaw);
 
 private:
+  // 参数
   std::string port_name_;
   int baud_rate_;
+  double Yaw_bias_ = 0.0;
+
   float angle_init_ = 0.0f;
   bool angle_calibrated_ = false;
   std::shared_ptr<SerialCommunicationClass> com_;
+
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
   std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64>> bridge_Yaw_mcu_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_TESspeed_mcu_;
