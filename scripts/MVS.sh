@@ -1,9 +1,9 @@
 #!/bin/bash
 cd ~/nav2_ws
 
-ROOT_PATH=~/nav2_ws/src/hik_camera_ros2_driver/hikSDK/bin
+ROOT_PATH=${MVCAM_SDK_PATH}/bin
 
-export LD_LIBRARY_PATH=${ROOT_PATH}:~/nav2_ws/src/hik_camera_ros2_driver/hikSDK/lib/amd64
+export LD_LIBRARY_PATH=${ROOT_PATH}:${MVCAM_COMMON_RUNENV}/64
 
 if [ "$EUID" -ne 0 ]; then
   echo "not root user" 
