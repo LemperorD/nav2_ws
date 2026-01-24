@@ -22,6 +22,7 @@
 ```bash
 git clone https://github.com/LemperorD/nav2_ws.git
 ```
+
 ```bash
 git submodule update --init --recursive
 ```
@@ -35,11 +36,13 @@ git submodule update --init --recursive
 ```bash
 sudo pip install vcstool2
 ```
+
 ```bash
 pip install xmacro
 ```
 
 然后正式拉取第三方软件。
+
 ```bash
 vcs import src < dependencies.repos
 ```
@@ -59,18 +62,23 @@ vcs import src < dependencies.repos
 ```bash
 mkdir -p ~/tools && cd ~/tools
 ```
+
 ```bash
 sudo apt install -y libeigen3-dev libomp-dev
 ```
+
 ```bash
 git clone https://github.com/koide3/small_gicp.git
 ```
+
 ```bash
 cd small_gicp
 ```
+
 ```bash
 mkdir build && cd build
 ```
+
 ```bash
 cmake .. -DCMAKE_BUILD_TYPE=Release && make -j
 sudo make install
@@ -83,14 +91,17 @@ sudo make install
 ```bash
 mkdir -p ~/tools && cd ~/tools
 ```
+
 ```bash
 git clone https://github.com/MIT-SPARK/KISS-Matcher.git
 ```
+
 ```bash
 cd KISS-Matcher
 ```
 
 接下来修改``Makefile``中的``cppinstall``和``cppinstall_matcher_only``为如下所示（添加两行）
+
 ```make
 cppinstall: deps
 	@mkdir -p cpp/kiss_matcher/build
@@ -122,12 +133,27 @@ sudo make install
 sudo ldconfig
 ```
 
-## 7. 针对实车的小修改
+## 7. MVS第三方库系统安装
+
+[MVS下载中心](https://www.hikrobotics.com/cn/machinevision/service/download/?module=0)
+
+下载linux版本的MVS并安装其中的deb包，MVS会安装在``/opt``目录下
+
+然后运行下述命令来删除海康的libusb库以防止污染环境
+
+```bash
+sudo rm -rf /opt/MVS/lib/64/libusb-1.0.so.0
+```
+
+> 可能以后新版本的MVS自带的usb驱动不叫这个名字，记得自己看一下``/opt/MVS/lib/64/``的内容
+
+## 8. 针对实车的小修改
 
 由于今年的哨兵采用双上位机，视觉与导航的代码相分离，所以``pb2025_rm_vision``在实车中完全无用，当上位机没有``openvino``与``tensorrt``环境时需要进行一定修改才能通过编译，修改过程如下：
 
 - 删除``armor_detect_openvino``和``armor_detect_tensorrt``两个功能包
-- 在``src/pb2025_rm_vision/pb2025_vision_bringup/CMakeLists.txt``中注释掉``model``的安装部分，即：
+- 在``src/pb2025_rm_vision/pb2025_vision_bringup/CMakeLists.txt``中注释掉``model``的安装部分，即: 
+  
 ```cmake
 ament_auto_package(
   INSTALL_TO_SHARE
@@ -139,34 +165,33 @@ ament_auto_package(
 ```
 接下来的实车代码维护记得***不要提交视觉子模块***即可
 
-## 8. 编译
-
-> 如果安装了MVS，请在**编译**和**运行导航**前运行
-> ```bash
-> export LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib
-> ```
+## 9. 编译
 
 上述步骤已经将所需的都安装好了，可以开始编译了。
 
 ```bash
 cd ~/nav2_ws
 ```
+
 ```bash
 rosdep init # 如果初始化过rosdep请忽略这一步
 ```
+
 ```bash
 rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 ```
+
 ```bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
 > 注：上位机可能算力不够，初次编译会出现死机状况，可以增加``--parallel 2``参数，调整后命令如下：
+>
 > ```bash
 > colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel 2
 > ```
 
-## 9. 运行
+## 10. 运行
 
 先在工作空间根目录下source环境变量。
 ```bash
@@ -176,18 +201,25 @@ source ./install/setup.bash
 ### terminal 1
 
 ```bash
-ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
+~/nav2_ws/scripts/simu_gz.sh
 ```
+
+> ```bash
+> ros2 launch rmu_gazebo_simulator bringup_sim.launch.py
+> ```
 
 此处记得**点击gazebo界面中左下角的启动键**，不然将无法发布机器人内部各个零件间的tf变换。
 
 ### terminal 2
 
 如果rviz出现闪烁问题，可以尝试先设置环境变量
+
 ```bash
 export QT_SCREEN_SCALE_FACTORS=1
 ```
+
 或
+
 ```bash
 export QT_ENABLE_HIGHDPI_SCALING=0
 ```
@@ -195,32 +227,44 @@ export QT_ENABLE_HIGHDPI_SCALING=0
 #### 导航模式
 
 ```bash
-source ./install/setup.bash
-ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
-world:=rmul_2025 \
-slam:=False
-#注：上述命令使用了联盟赛的3v3地图，方便后续行为树决策部分使用
+~/nav2_ws/scripts/simu_nav.sh
 ```
+
+
+> ```bash
+> source ./install/setup.bash
+> ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
+> world:=rmul_2025 \
+> slam:=False
+> #注：上述命令使用了联盟赛的3v3地图，方便后续行为树决策部分使用
+> ```
 
 #### 建图模式
 
 ```bash
-source ./install/setup.bash
-ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
-slam:=True
+~/nav2_ws/scripts/simu_map.sh
 ```
+
+
+> ```bash
+> source ./install/setup.bash
+> ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
+> slam:=True
+> ```
 
 具体的更改地图、调参等功能请移步``tutorial.md``查看。
 
 ## 10. 假裁判系统及操作手客户端
 
 使用假裁判系统及操作手客户端需安装如下python第三方库
+
 ```bash
 pip install engineio
 pip install Flask
 pip install flask-cors
 pip install flask-socketio
 ```
+
 使用``./scripts/local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
 
 使用``./scripts/local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
