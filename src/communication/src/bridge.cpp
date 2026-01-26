@@ -219,11 +219,5 @@ inline double BridgeNode::dwa_filter(double sample){
 
 } // namespace bridge
 
-int main(int argc, char** argv)
-{
-  rclcpp::init(argc, argv);
-  rclcpp::NodeOptions options;
-  rclcpp::spin(std::make_shared<bridge::BridgeNode>(options));
-  rclcpp::shutdown();
-  return 0;
-}
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(bridge::BridgeNode)

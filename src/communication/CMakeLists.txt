@@ -15,21 +15,25 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
-# 库
 add_library(communication SHARED src/Com.cpp)
 target_include_directories(communication PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(communication rclcpp)
 
-# 可执行
-add_executable(bridge_node src/bridge.cpp)
+add_library(bridge_node src/bridge.cpp)
 target_link_libraries(bridge_node communication)
 ament_target_dependencies(bridge_node
   rclcpp
+  rclcpp_components
   std_msgs
   geometry_msgs
   tf2_ros
+)
+
+rclcpp_components_register_node(bridge_node
+  PLUGIN bridge::BridgeNode
+  EXECUTABLE ${PROJECT_NAME}_node
 )
 
 add_executable(cmd_vel_test_node src/cmd_vel_test.cpp)
@@ -41,7 +45,9 @@ install(TARGETS communication bridge_node
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY include/ DESTINATION include)
+install(
+  DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME})
 
 install(
   DIRECTORY config launch
