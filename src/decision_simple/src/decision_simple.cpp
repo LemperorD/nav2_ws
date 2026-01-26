@@ -16,7 +16,7 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
 {
   // ===== params =====
   frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
-  base_frame_id_ = this->declare_parameter<std::string>("base_frame_id", "base_link");      
+  base_frame_id_ = this->declare_parameter<std::string>("base_frame_id", "base_footprint");      
 
   robot_status_topic_ = this->declare_parameter<std::string>("referee_robot_status_topic", "referee/robot_status");
   goal_pose_topic_    = this->declare_parameter<std::string>("goal_pose_topic", "goal_pose");
@@ -82,7 +82,6 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   // init
   setState(State::DEFAULT);
 
-  
   setChassisMode(chassisFollowed);
 
   // timer
@@ -179,7 +178,6 @@ void DecisionSimple::tick()
   if (isStatusBad(rs)) {
     setState(State::SUPPLY);
 
-    
     if (attacked_recent) setChassisMode(littleTES);               
     else setChassisMode(at_supply ? littleTES : goHome);          
 
@@ -357,7 +355,7 @@ void DecisionSimple::setState(State s)
 void DecisionSimple::publishChassisMode(chassisMode mode)
 {
   std_msgs::msg::UInt8 m;
-  m.data = static_cast<uint8_t>(mode);
+  m.data = mode;
   chassis_mode_pub_->publish(m);
 }
 

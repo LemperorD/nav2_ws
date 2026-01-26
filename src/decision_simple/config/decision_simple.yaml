@@ -3,7 +3,7 @@
     scenario: "main"           # main / test_attack_pose / test_attacked_feedback / test_is_detect_enemy
     require_game_running: false
 
-    # referee topics（fake_referee 默认就是这些）
+    # referee topics
     referee_robot_status_topic: "referee/robot_status"
     referee_game_status_topic:  "referee/game_status"
     referee_rfid_status_topic:  "referee/rfid_status"
@@ -20,7 +20,7 @@
     cmd_gimbal_topic: "cmd_gimbal"
     sub_mode_topic: "sub_mode"
 
-    # costmap / vision（你们有就接，没有也不影响补给/默认逻辑）
+    # costmap / vision
     nav_globalCostmap_topic: "global_costmap/costmap"
     detector_armors_topic: "detector/armors"
     tracker_target_topic: "tracker/target"
