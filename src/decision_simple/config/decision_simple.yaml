@@ -1,4 +1,4 @@
-decision_simple:
+/**:
   ros__parameters:
     scenario: "main"           # main / test_attack_pose / test_attacked_feedback / test_is_detect_enemy
     require_game_running: false
