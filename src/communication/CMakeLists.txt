@@ -21,7 +21,7 @@ target_include_directories(communication PUBLIC
   $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(communication rclcpp)
 
-add_library(bridge_node src/bridge.cpp)
+add_library(bridge_node SHARED src/bridge.cpp)
 target_link_libraries(bridge_node communication)
 ament_target_dependencies(bridge_node
   rclcpp
