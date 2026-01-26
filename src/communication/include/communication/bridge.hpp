@@ -66,6 +66,7 @@ private:
   std::string port_name_;
   int baud_rate_;
   double Yaw_bias_ = 0.0;
+  double vel_trans_scale_ = 40.0;
 
   float angle_init_ = 0.0f;
   bool angle_calibrated_ = false;

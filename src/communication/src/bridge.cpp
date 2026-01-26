@@ -15,11 +15,13 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<int>("baud_rate", 115200);
   this->declare_parameter<double>("Yaw_bias", 0.0);
   this->declare_parameter<int>("max_dwa_size", 15);
+  this->declare_parameter<double>("vel_trans_scale", 40.0);
 
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
   this->get_parameter("max_dwa_size", max_dwa_size_);
+  this->get_parameter("vel_trans_scale", vel_trans_scale_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
@@ -89,18 +91,18 @@ BridgeNode::~BridgeNode()
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
-  float vx = static_cast<float>(msg.linear.x);
-  float vy = static_cast<float>(msg.linear.y);
-  float wz = static_cast<float>(msg.angular.z); // TODO: change to chassis frame
+  float vx = static_cast<float>(vel_trans_scale_ * msg.linear.x);
+  float vy = static_cast<float>(vel_trans_scale_ * msg.linear.y);
+  float wz = static_cast<float>(vel_trans_scale_ * msg.angular.z); // TODO: change to chassis frame
 
-  float vx_Y = static_cast<float>(msg.linear.x);
-  float vy_Y = static_cast<float>(msg.linear.y); // TODO: change to YAW frame
+  float vx_Y = static_cast<float>(vel_trans_scale_ * msg.linear.x);
+  float vy_Y = static_cast<float>(vel_trans_scale_ * msg.linear.y); // TODO: change to YAW frame
 
   uint8_t* payload = new uint8_t[26]();
 
   payload[0] = chassisFollowed; //默认为底盘跟随模式
   // payload[0] = littleTES; //默认为小陀螺模式
-  // payload[0] = chasis_mode_; //由上层行为树控制底盘模式
+  // payload[0] = chassis_mode_; //由上层决策节点控制底盘模式
 
   com_->writeFloatLE(&payload[1], angle_init_); // TODO: get from relocalization TF
   payload[5] = true; // TODO: get child_mode from behavior
@@ -110,7 +112,7 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   
   com_->writeFloatLE(&payload[14], vx);
   com_->writeFloatLE(&payload[18], vy);
-  com_->writeFloatLE(&payload[22], wz);
+  com_->writeFloatLE(&payload[22], -wz); // 实际测试发现pc与mcu角速度方向相反
 
   // std::cout << "[ ";
   // for (size_t i = 0; i < 26; i++) {
