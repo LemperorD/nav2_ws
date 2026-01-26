@@ -13,7 +13,9 @@
 #include "std_msgs/msg/u_int8.hpp"
 
 #include "tf2_ros/buffer.h"                                 
-#include "tf2_ros/transform_listener.h"                     
+#include "tf2_ros/transform_listener.h"
+
+// #define DECISION_SIMPLE_HAS_AUTO_AIM
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
 #include "auto_aim_interfaces/msg/armors.hpp"

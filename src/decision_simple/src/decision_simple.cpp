@@ -201,7 +201,6 @@ void DecisionSimple::tick()
   if (enemy_recent) {
     setState(State::ATTACK);
 
-   
     if (attacked_recent) setChassisMode(littleTES);               
     else setChassisMode(chassisFollowed);                         
 
