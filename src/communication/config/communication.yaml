@@ -3,9 +3,9 @@
         port_name : "/dev/ttyACM0"
         baud_rate : 115200 # options: 9600, 19200, 38400, 57600, 115200, 230400
 
-        Yaw_bias : 0.0  # 大Yaw轴的偏移角度，单位：弧度
+        Yaw_bias : 4.355135734816243  # 大Yaw轴的偏移角度，单位：弧度
         max_dwa_size : 15 # 对大Yaw值进行滑动窗口滤波的窗口长度
 
         # 从pc到mcu的速度传输的倍数
         # pc端速度消息单位为m/s，mcu端则为mm/s
-        vel_trans_scale : 40.0 # 理论值为1000，将其提取在yaml文件中调试
+        vel_trans_scale : 8.0 # 理论值为1000，将其提取在yaml文件中调试
