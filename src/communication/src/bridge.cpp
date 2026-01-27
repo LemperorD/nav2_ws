@@ -93,7 +93,7 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
   float vx = static_cast<float>(vel_trans_scale_ * msg.linear.x);
   float vy = static_cast<float>(vel_trans_scale_ * msg.linear.y);
-  float wz = static_cast<float>(vel_trans_scale_ * msg.angular.z); // TODO: change to chassis frame
+  float wz = static_cast<float>(msg.angular.z); // TODO: change to chassis frame
 
   float vx_Y = static_cast<float>(vel_trans_scale_ * msg.linear.x);
   float vy_Y = static_cast<float>(vel_trans_scale_ * msg.linear.y); // TODO: change to YAW frame
@@ -130,7 +130,7 @@ std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
   msg.data = encoderToRad(com_->readFloatLE(&payload[7]));
-  // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
+  publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }
 
@@ -197,7 +197,7 @@ void BridgeNode::publishTransformGimbalYaw(double Yaw)
   tf_msg.transform.translation.z = 0.0;
 
   tf2::Quaternion q;
-  q.setRPY(0.0, 0.0, dwa_filter(Yaw) + Yaw_bias_);
+  q.setRPY(0.0, 0.0, - dwa_filter(Yaw) + Yaw_bias_);
 
   tf_msg.transform.rotation.x = q.x();
   tf_msg.transform.rotation.y = q.y();
