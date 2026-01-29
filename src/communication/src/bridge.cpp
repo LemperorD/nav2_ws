@@ -16,14 +16,14 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<double>("Yaw_bias", 0.0);
   this->declare_parameter<int>("max_dwa_size", 15);
   this->declare_parameter<double>("vel_trans_scale", 40.0);
-  this->declare_parameter<double>("yaw_diff", 0.0);
+  // this->declare_parameter<double>("yaw_diff", 0.0);
 
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
   this->get_parameter("max_dwa_size", max_dwa_size_);
   this->get_parameter("vel_trans_scale", vel_trans_scale_);
-  this->get_parameter<double>("yaw_diff", yaw_diff_);
+  // this->get_parameter<double>("yaw_diff", yaw_diff_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
@@ -42,7 +42,7 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
     );
 
   bridge_Yaw_mcu_ = std::make_shared<RosSerialBridge
-    <std_msgs::msg::Float64>>(
+    <std_msgs::msg::Float32>>(
       this, "/serial/Yaw", false,
       nullptr,
       std::bind(&BridgeNode::decodeYaw, this, std::placeholders::_1),
@@ -124,10 +124,14 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   return payload;
 }
 
-std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
+std_msgs::msg::Float32 BridgeNode::decodeYaw(const uint8_t* payload)
 {
-  std_msgs::msg::Float64 msg;
-  msg.data = com_->readFloatLE(&payload[7]);
+  std_msgs::msg::Float32 msg;
+  // msg.data = com_->readFloatLE(&payload[7]);
+  float yaw = 0.0f;
+  std::memcpy(&yaw, payload + 7, sizeof(float));
+  msg.data = yaw;
+  RCLCPP_INFO(this->get_logger(), "yaw: %f", msg.data);
   // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }

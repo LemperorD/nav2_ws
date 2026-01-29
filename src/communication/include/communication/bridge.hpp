@@ -10,7 +10,7 @@
 #include "tf2_ros/transform_listener.h"
 #include <tf2_ros/transform_broadcaster.h>
 
-#include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 
@@ -47,7 +47,7 @@ public: // 大Yaw电机编码值解码
 
 private: // 编解码函数
   uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
-  std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
+  std_msgs::msg::Float32 decodeYaw(const uint8_t* payload);
   geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
 
 private: // 调试小陀螺下角度误差，进行转换
@@ -78,7 +78,7 @@ private:
   std::shared_ptr<SerialCommunicationClass> com_;
 
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
-  std::shared_ptr<RosSerialBridge<std_msgs::msg::Float64>> bridge_Yaw_mcu_;
+  std::shared_ptr<RosSerialBridge<std_msgs::msg::Float32>> bridge_Yaw_mcu_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_TESspeed_mcu_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
