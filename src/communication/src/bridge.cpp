@@ -16,19 +16,21 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<double>("Yaw_bias", 0.0);
   this->declare_parameter<int>("max_dwa_size", 15);
   this->declare_parameter<double>("vel_trans_scale", 40.0);
+  this->declare_parameter<double>("yaw_diff", 0.0);
 
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
   this->get_parameter("max_dwa_size", max_dwa_size_);
   this->get_parameter("vel_trans_scale", vel_trans_scale_);
+  this->get_parameter<double>("yaw_diff", yaw_diff_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
-
+  
   bridge_twist_pc_ = std::make_shared<RosSerialBridge
     <geometry_msgs::msg::Twist>>(
       this, "/cmd_vel", true,
@@ -69,40 +71,36 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       chassis_mode_ = static_cast<uint8_t>(msg->data);
     });
 }
-
+  
 BridgeNode::~BridgeNode()
-{
+{ 
   RCLCPP_INFO(this->get_logger(), "BridgeNode shutting down...");
 
-  if (gimbal_vision_timer_) {
-    gimbal_vision_timer_.reset();
-  }
+  if (gimbal_vision_timer_) gimbal_vision_timer_.reset();
 
+  chassis_mode_sub_.reset();
   bridge_twist_pc_.reset();
   bridge_Yaw_mcu_.reset();
   bridge_TESspeed_mcu_.reset();
-
-  chassis_mode_sub_.reset();
-
+  
   com_.reset();
-
   RCLCPP_INFO(this->get_logger(), "BridgeNode shutdown complete.");
 }
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
+  geometry_msgs::msg::Twist twist_chassis = transformVelocityToChassis(msg, yaw_diff_ * M_PI / 180.0);
+
   float vx = static_cast<float>(vel_trans_scale_ * msg.linear.x);
   float vy = static_cast<float>(vel_trans_scale_ * msg.linear.y);
-  float wz = static_cast<float>(msg.angular.z); // TODO: change to chassis frame
-
-  float vx_Y = static_cast<float>(vel_trans_scale_ * msg.linear.x);
-  float vy_Y = static_cast<float>(vel_trans_scale_ * msg.linear.y); // TODO: change to YAW frame
+  float wz = static_cast<float>(msg.angular.z);
+  //实际测试需要负号
+  float vx_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.x);
+  float vy_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.y);
 
   uint8_t* payload = new uint8_t[26]();
 
-  payload[0] = chassisFollowed; //默认为底盘跟随模式
-  // payload[0] = littleTES; //默认为小陀螺模式
-  // payload[0] = chassis_mode_; //由上层决策节点控制底盘模式
+  payload[0] = chassis_mode_; //由上层决策节点控制底盘模式
 
   com_->writeFloatLE(&payload[1], angle_init_); // TODO: get from relocalization TF
   payload[5] = true; // TODO: get child_mode from behavior
@@ -120,7 +118,7 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   //     << std::hex << std::uppercase
   //     << static_cast<int>(payload[i]) << " ";
   // }
-  // std::cout << "]" << std::dec << std::endl;
+  // std::cout << "]" << std::dec << std::endl; // debug
 
   // RCLCPP_INFO(this->get_logger(), "Encoded Twist: vx=%.2f, vy=%.2f, wz=%.2f", vx, vy, wz);
   return payload;
@@ -129,8 +127,8 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 std_msgs::msg::Float64 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float64 msg;
-  msg.data = encoderToRad(com_->readFloatLE(&payload[7]));
-  publishTransformGimbalYaw(msg.data); // TODO:与电控联调
+  msg.data = com_->readFloatLE(&payload[7]);
+  // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }
 
@@ -215,6 +213,18 @@ inline double BridgeNode::dwa_filter(double sample){
   double sum = 0.0;
   for(double x : dwa_) sum += x; 
   return sum / dwa_.size();
+}
+
+inline geometry_msgs::msg::Twist BridgeNode::transformVelocityToChassis(
+  const geometry_msgs::msg::Twist & twist_in, double yaw_diff)
+{
+  geometry_msgs::msg::Twist out;
+
+  out.linear.x = twist_in.linear.x * std::cos(yaw_diff) + twist_in.linear.y * std::sin(yaw_diff);
+  out.linear.y = -twist_in.linear.x * std::sin(yaw_diff) + twist_in.linear.y * std::cos(yaw_diff);
+  out.angular.z = twist_in.angular.z;
+
+  return out;
 }
 
 } // namespace bridge

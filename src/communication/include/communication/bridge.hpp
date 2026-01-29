@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <deque>
+#include <atomic>
 
 #include <rclcpp/rclcpp.hpp>
 #include "tf2_ros/buffer.h"
@@ -49,6 +50,10 @@ private: // 编解码函数
   std_msgs::msg::Float64 decodeYaw(const uint8_t* payload);
   geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
 
+private: // 调试小陀螺下角度误差，进行转换
+  inline geometry_msgs::msg::Twist transformVelocityToChassis(const geometry_msgs::msg::Twist & twist_in, double yaw_diff);
+  double yaw_diff_ = 0.0;
+
 private: // create a frame for vision
   rclcpp::TimerBase::SharedPtr gimbal_vision_timer_;
   void publishTransformGimbalVision();
@@ -86,7 +91,7 @@ private:
 
   // 多输入/输出所使用的成员变量可在此添加
   // Member variables used for multi-input/output can be added here
-  uint8_t chassis_mode_;
+  uint8_t chassis_mode_ = chassisFollowed;
 };
 
 }  // namespace bridge
