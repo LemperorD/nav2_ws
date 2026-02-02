@@ -89,7 +89,7 @@ BridgeNode::~BridgeNode()
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
-  geometry_msgs::msg::Twist twist_chassis = transformVelocityToChassis(msg, yaw_diff_ * M_PI / 180.0);
+  geometry_msgs::msg::Twist twist_chassis = transformVelocityToChassis(msg, -yaw_diff_ * M_PI / 180.0);
 
   float vx = static_cast<float>(vel_trans_scale_ * msg.linear.x);
   float vy = static_cast<float>(vel_trans_scale_ * msg.linear.y);
@@ -127,11 +127,8 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 std_msgs::msg::Float32 BridgeNode::decodeYaw(const uint8_t* payload)
 {
   std_msgs::msg::Float32 msg;
-  // msg.data = com_->readFloatLE(&payload[7]);
-  float yaw = 0.0f;
-  std::memcpy(&yaw, payload + 7, sizeof(float));
-  msg.data = yaw;
-  RCLCPP_INFO(this->get_logger(), "yaw: %f", msg.data);
+  std::memcpy(&yaw_diff_, payload + 7, sizeof(float));
+  msg.data = yaw_diff_;
   // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
   return msg;
 }
@@ -224,8 +221,10 @@ inline geometry_msgs::msg::Twist BridgeNode::transformVelocityToChassis(
 {
   geometry_msgs::msg::Twist out;
 
-  out.linear.x = twist_in.linear.x * std::cos(yaw_diff) + twist_in.linear.y * std::sin(yaw_diff);
-  out.linear.y = -twist_in.linear.x * std::sin(yaw_diff) + twist_in.linear.y * std::cos(yaw_diff);
+  // 好像对但是很诡异，**亟待与电控交流**
+  out.linear.x = twist_in.linear.x * std::cos(yaw_diff) - twist_in.linear.y * std::sin(yaw_diff);
+  out.linear.y = twist_in.linear.x * std::sin(yaw_diff) + twist_in.linear.y * std::cos(yaw_diff);
+  RCLCPP_INFO(this->get_logger(), "out.linear: vx=%.2f, vy=%.2f", out.linear.x, out.linear.y);
   out.angular.z = twist_in.angular.z;
 
   return out;

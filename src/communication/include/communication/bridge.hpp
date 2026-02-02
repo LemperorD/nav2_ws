@@ -52,7 +52,7 @@ private: // 编解码函数
 
 private: // 调试小陀螺下角度误差，进行转换
   inline geometry_msgs::msg::Twist transformVelocityToChassis(const geometry_msgs::msg::Twist & twist_in, double yaw_diff);
-  double yaw_diff_ = 0.0;
+  float yaw_diff_ = 0.0;
 
 private: // create a frame for vision
   rclcpp::TimerBase::SharedPtr gimbal_vision_timer_;
