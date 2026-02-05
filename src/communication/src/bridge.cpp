@@ -16,14 +16,12 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<double>("Yaw_bias", 0.0);
   this->declare_parameter<int>("max_dwa_size", 15);
   this->declare_parameter<double>("vel_trans_scale", 40.0);
-  // this->declare_parameter<double>("yaw_diff", 0.0);
 
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
   this->get_parameter("max_dwa_size", max_dwa_size_);
   this->get_parameter("vel_trans_scale", vel_trans_scale_);
-  // this->get_parameter<double>("yaw_diff", yaw_diff_);
 
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
 
@@ -89,21 +87,23 @@ BridgeNode::~BridgeNode()
 
 uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
 {
-  geometry_msgs::msg::Twist twist_chassis = transformVelocityToChassis(msg, -yaw_diff_ * M_PI / 180.0);
+  geometry_msgs::msg::Twist twist_chassis = transformVelocityToChassis(msg, yaw_diff_ * M_PI / 180.0);
 
   float vx = static_cast<float>(vel_trans_scale_ * msg.linear.x);
   float vy = static_cast<float>(vel_trans_scale_ * msg.linear.y);
   float wz = static_cast<float>(msg.angular.z);
-  //实际测试需要负号
+
   float vx_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.x);
   float vy_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.y);
+
+  RCLCPP_INFO(this->get_logger(), "Encoding Twist: vx_Y=%.2f, vy_Y=%.2f", vx_Y, vy_Y);
 
   uint8_t* payload = new uint8_t[26]();
 
   payload[0] = chassis_mode_; //由上层决策节点控制底盘模式
 
-  com_->writeFloatLE(&payload[1], angle_init_); // TODO: get from relocalization TF
-  payload[5] = true; // TODO: get child_mode from behavior
+  com_->writeFloatLE(&payload[1], angle_init_);
+  payload[5] = true;
 
   com_->writeFloatLE(&payload[6], vx_Y);
   com_->writeFloatLE(&payload[10], vy_Y);
@@ -116,11 +116,11 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   // for (size_t i = 0; i < 26; i++) {
   //   std::cout << std::setw(2) << std::setfill('0')
   //     << std::hex << std::uppercase
-  //     << static_cast<int>(payload[i]) << " ";
+  //     << static_cast<int>(payload[i]) << std::dec << " ";
   // }
-  // std::cout << "]" << std::dec << std::endl; // debug
+  // std::cout << "]" << std::endl;
 
-  // RCLCPP_INFO(this->get_logger(), "Encoded Twist: vx=%.2f, vy=%.2f, wz=%.2f", vx, vy, wz);
+  RCLCPP_INFO(this->get_logger(), "Encoded Twist: vx=%.2f, vy=%.2f, wz=%.2f", vx, vy, wz);
   return payload;
 }
 
@@ -129,7 +129,7 @@ std_msgs::msg::Float32 BridgeNode::decodeYaw(const uint8_t* payload)
   std_msgs::msg::Float32 msg;
   std::memcpy(&yaw_diff_, payload + 7, sizeof(float));
   msg.data = yaw_diff_;
-  // publishTransformGimbalYaw(msg.data); // TODO:与电控联调
+  // publishTransformGimbalYaw(msg.data); // 经调试后决定不在这里发布TF
   return msg;
 }
 
@@ -220,13 +220,9 @@ inline geometry_msgs::msg::Twist BridgeNode::transformVelocityToChassis(
   const geometry_msgs::msg::Twist & twist_in, double yaw_diff)
 {
   geometry_msgs::msg::Twist out;
-
-  // 好像对但是很诡异，**亟待与电控交流**
   out.linear.x = twist_in.linear.x * std::cos(yaw_diff) - twist_in.linear.y * std::sin(yaw_diff);
   out.linear.y = twist_in.linear.x * std::sin(yaw_diff) + twist_in.linear.y * std::cos(yaw_diff);
-  RCLCPP_INFO(this->get_logger(), "out.linear: vx=%.2f, vy=%.2f", out.linear.x, out.linear.y);
   out.angular.z = twist_in.angular.z;
-
   return out;
 }
 

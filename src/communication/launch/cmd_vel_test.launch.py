@@ -34,7 +34,7 @@ def generate_launch_description():
 
     start_communication_node = Node(
         package="communication",
-        executable="bridge_node",
+        executable="communication_node",
         namespace=namespace,
         parameters=[communication_cfg_dir],
         output="screen",

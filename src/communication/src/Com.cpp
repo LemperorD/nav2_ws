@@ -1,4 +1,5 @@
 #include "communication/Com.h"
+#include "communication/termcolor.hpp"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -49,13 +50,13 @@ SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std
     if (!port.empty()) {
       openSerialPort(port, baud_rate);
     } else {
-      RCLCPP_ERROR(node_->get_logger(), "No serial port found.");
+      std::cerr << termcolor::red << "No serial port found." << termcolor::reset <<std::endl;
+      // RCLCPP_ERROR(node_->get_logger(), "No serial port found.");
     }
   }
 
   running_ = true;
   timer_thread_ = std::thread(&SerialCommunicationClass::timerThread, this);
-  // frame_buffer_.resize(23);
 }
 
 SerialCommunicationClass::~SerialCommunicationClass() {
@@ -68,11 +69,12 @@ void SerialCommunicationClass::openSerialPort(const std::string& port_name, int 
 {
     fd_ = open(port_name.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd_ == -1) {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to open serial port: %s", strerror(errno));
+      std::cerr << termcolor::red << "Failed to open serial port: " << strerror(errno) << termcolor::reset<< std::endl;
+      // RCLCPP_ERROR(node_->get_logger(), "Failed to open serial port: %s", strerror(errno));
     } else {
-        RCLCPP_INFO(node_->get_logger(), "Serial port opened: %s", port_name.c_str());
-        configureSerialPort(baud_rate);
-        RCLCPP_INFO(node_->get_logger(), "Serial initialized: %s", port_name.c_str());
+      printf("\033[31m[ERROR] Serial port opened: %s\033[0m\n", port_name.c_str());
+      configureSerialPort(baud_rate);
+      printf("\033[32mSerial initialized: %s\033[0m\n", port_name.c_str());
     }
 }
 
@@ -80,16 +82,17 @@ std::string SerialCommunicationClass::findSerialPort()
 {
     DIR* dir = opendir("/dev");
     if (!dir) {
-        RCLCPP_ERROR(node_->get_logger(), "Failed to open /dev directory");
-        return "";
+      std::cerr << termcolor::red << "Failed to open /dev directory" << termcolor::reset << std::endl;
+      // RCLCPP_ERROR(node_->get_logger(), "Failed to open /dev directory");
+      return "";
     }
 
     struct dirent* entry;
     while ((entry = readdir(dir)) != NULL) {
-        if (strstr(entry->d_name, "ttyUSB") != nullptr || strstr(entry->d_name, "ttyACM") != nullptr) {
-            closedir(dir);
-            return std::string("/dev/") + entry->d_name;
-        }
+      if (strstr(entry->d_name, "ttyUSB") != nullptr || strstr(entry->d_name, "ttyACM") != nullptr) {
+        closedir(dir);
+        return std::string("/dev/") + entry->d_name;
+      }
     }
     closedir(dir);
     return "";
@@ -101,7 +104,8 @@ void SerialCommunicationClass::configureSerialPort(int baud_rate)
   memset(&tty, 0, sizeof(tty));
 
   if (tcgetattr(fd_, &tty) != 0) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to get serial attributes");
+    std::cerr << termcolor::red << "Failed to get serial attributes" << termcolor::reset << std::endl;
+    // RCLCPP_ERROR(node_->get_logger(), "Failed to get serial attributes");
     close(fd_);
     fd_ = -1;
     return;
@@ -116,7 +120,7 @@ void SerialCommunicationClass::configureSerialPort(int baud_rate)
     case 115200: speed = B115200; break;
     case 230400: speed = B230400; break;
     default:
-      std::cerr << "Unsupported baud rate: " << baud_rate << std::endl;
+      std::cerr << termcolor::red << "Unsupported baud rate: " << baud_rate << termcolor::reset << std::endl;
       return;
   }
 
@@ -141,7 +145,8 @@ void SerialCommunicationClass::configureSerialPort(int baud_rate)
   tty.c_cc[VTIME] = 1;
 
   if (tcsetattr(fd_, TCSANOW, &tty) != 0) {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to set serial attributes");
+    std::cerr << termcolor::red << "Failed to set serial attributes" << termcolor::reset << std::endl;
+    // RCLCPP_ERROR(node_->get_logger(), "Failed to set serial attributes");
     close(fd_);
     fd_ = -1;
     return;
@@ -154,12 +159,14 @@ void SerialCommunicationClass::configureSerialPort(int baud_rate)
 void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
 {
   if (fd_ < 0) {
-    RCLCPP_ERROR(node_->get_logger(), "Serial port not available");
+    std::cerr << termcolor::red << "Serial port not available" << termcolor::reset << std::endl;
+    // RCLCPP_ERROR(node_->get_logger(), "Serial port not available");
+    return;
   }
 
   size_t frame_len = len + FRAME_MIN_SIZE;
+  // std::cout << termcolor::blue << "Sending frame of length: " << frame_len << termcolor::reset << std::endl;
 
-  // uint8_t frame[frame_len];
   std::vector<uint8_t> frame(frame_len);
   frame[0] = FRAME_HEADER1;
   frame[1] = FRAME_HEADER2;
@@ -174,25 +181,25 @@ void SerialCommunicationClass::sendDataFrame(const uint8_t* data, size_t len)
   // for (size_t i = 0; i < 31; i++) {
   //   std::cout << std::setw(2) << std::setfill('0')
   //     << std::hex << std::uppercase
-  //     << static_cast<int>(frame[i]) << " ";
+  //     << static_cast<int>(frame[i]) << std::dec << " ";
   // }
-  // std::cout << "]" << std::dec << std::endl;
+  // std::cout << "]" << std::endl;
 
   ssize_t written = write(fd_, frame.data(), frame_len);
   if (written != frame_len) {
-    RCLCPP_ERROR(node_->get_logger(), "TX failed: written %ld / %zu", written, frame_len);
+    std::cerr << termcolor::red << "TX failed" << written << "/" << frame_len << termcolor::reset << std::endl;
   }
 }
 
 uint8_t* SerialCommunicationClass::receiveDataFrame()
 {
   // std::cout << "[ ";
-  // for (size_t i = 0; i < 23; i++) {
+  // for (size_t i = 0; i < 31; i++) {
   //   std::cout << std::setw(2) << std::setfill('0')
   //     << std::hex << std::uppercase
-  //     << static_cast<int>(frame_buffer_[i]) << " ";
+  //     << static_cast<int>(frame[i]) << std::dec << " ";
   // }
-  // std::cout << "]" << std::dec << std::endl;
+  // std::cout << "]" << std::endl;
   return frame_buffer_.data();
 }
 
@@ -224,7 +231,11 @@ void SerialCommunicationClass::processBuffer() {
     if (buffer_index_ < 4) return;
 
     if (buffer_[2] != COMMAND_CODE_ARRAY25) {
-      RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X (expected 0x%02X)", buffer_[2], COMMAND_CODE_ARRAY25);
+      std::cout << termcolor::yellow
+                << "Unknown CMD=0x" << std::hex << static_cast<int>(buffer_[2])
+                << " (expected 0x" << static_cast<int>(COMMAND_CODE_ARRAY25) << ")" << std::dec
+                << termcolor::reset << std::endl;
+      // RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X (expected 0x%02X)", buffer_[2], COMMAND_CODE_ARRAY25);
       buffer_index_ = 0;
       return;
     }
@@ -233,7 +244,8 @@ void SerialCommunicationClass::processBuffer() {
 
     // 合理性检查
     if (frame_len > BUFFER_SIZE || frame_len > MAX_FRAME_LEN) {
-      RCLCPP_ERROR(node_->get_logger(), "Invalid frame length: %zu, drop buffer", frame_len);
+      // RCLCPP_ERROR(node_->get_logger(), "Invalid frame length: %zu, drop buffer", frame_len);
+      std::cout << termcolor::red << "Invalid frame length: " << frame_len << ", drop buffer" << termcolor::reset << std::endl;
       buffer_index_ = 0;
       return;
     }
@@ -243,7 +255,10 @@ void SerialCommunicationClass::processBuffer() {
     // CRC8 校验（Header+Payload）
     uint8_t calc = crc8_calc(buffer_.data(), 4 + len);
     if (calc != buffer_[frame_len - 1]) {
-      RCLCPP_WARN(node_->get_logger(), "CRC8 failed: calc=0x%02X, recv=0x%02X, len=%d", calc, buffer_[frame_len - 1], len);
+      std::cout << termcolor::yellow << "CRC8 failed: calc=0x" << std::hex << static_cast<int>(calc)
+                << ", recv=0x" << static_cast<int>(buffer_[frame_len - 1])
+                << ", len=" << std::dec << static_cast<int>(len) << termcolor::reset << std::endl;
+      // RCLCPP_WARN(node_->get_logger(), "CRC8 failed: calc=0x%02X, recv=0x%02X, len=%d", calc, buffer_[frame_len - 1], len);
       buffer_index_ = 0;
       return;
     }
@@ -273,18 +288,23 @@ void SerialCommunicationClass::processFrame(const uint8_t* data) {
     return;
   }
 
-  RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X LEN=%u (ignored)", cmd, len);
+  std::cout << termcolor::yellow
+            << "Unknown CMD=0x" << std::hex << static_cast<int>(cmd)
+            << " LEN=" << std::dec << static_cast<int>(len)
+            << " (ignored)" << termcolor::reset << std::endl;
+  // RCLCPP_WARN(node_->get_logger(), "Unknown CMD=0x%02X LEN=%u (ignored)", cmd, len);
 }
 
 void SerialCommunicationClass::timerCallback() {
   if (fd_ < 0) 
   {
-    RCLCPP_INFO(node_->get_logger(), "Serial port not available in timerCallback");
+    printf("Serial port not available in timerCallback\n");
     return;
   }
 
   if (buffer_index_ >= BUFFER_SIZE - 64) {
-    RCLCPP_WARN(node_->get_logger(), "Buffer near full, clearing");
+    std::cout << termcolor::yellow << "Buffer near full, clearing" << termcolor::reset << std::endl;
+    // RCLCPP_WARN(node_->get_logger(), "Buffer near full, clearing");
     buffer_index_ = 0;
   }
 
@@ -292,7 +312,8 @@ void SerialCommunicationClass::timerCallback() {
   ssize_t n = read(fd_, temp, sizeof(temp));
   if (n > 0) {
     if (buffer_index_ + n > BUFFER_SIZE) {
-      RCLCPP_WARN(node_->get_logger(), "Buffer overflow, drop");
+      std::cout << termcolor::red << "Buffer overflow, drop" << termcolor::reset << std::endl;
+      // RCLCPP_WARN(node_->get_logger(), "Buffer overflow, drop");
       buffer_index_ = 0;
       return;
     }
