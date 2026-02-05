@@ -96,7 +96,7 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   float vx_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.x);
   float vy_Y = static_cast<float>(vel_trans_scale_ * twist_chassis.linear.y);
 
-  RCLCPP_INFO(this->get_logger(), "Encoding Twist: vx_Y=%.2f, vy_Y=%.2f", vx_Y, vy_Y);
+  // RCLCPP_INFO(this->get_logger(), "Encoding Twist: vx_Y=%.2f, vy_Y=%.2f", vx_Y, vy_Y);
 
   uint8_t* payload = new uint8_t[26]();
 
@@ -120,7 +120,6 @@ uint8_t* BridgeNode::encodeTwist(const geometry_msgs::msg::Twist& msg)
   // }
   // std::cout << "]" << std::endl;
 
-  RCLCPP_INFO(this->get_logger(), "Encoded Twist: vx=%.2f, vy=%.2f, wz=%.2f", vx, vy, wz);
   return payload;
 }
 
