@@ -1,8 +1,8 @@
 # 北航Transistor战队2026赛季哨兵工作空间
 
-> 写在前面
-> 
+> ```text
 > 此为新版README.md，在将北极熊大量功能包全部fork过来之后笔者重新编写了安装文档。
+> ```
 
 <div style="text-align: center;">
   <img src="docs/images/transistor_code.png" width="400" height="400">
@@ -185,7 +185,7 @@ rosdep install -r --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
-> 注：上位机可能算力不够，初次编译会出现死机状况，可以增加``--parallel 2``参数，调整后命令如下：
+> 注：上位机可能算力不够，初次编译会出现死机状况，可以增加 ``--parallel 2`` 参数，调整后命令如下：
 >
 > ```bash
 > colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --parallel 2
@@ -194,6 +194,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ## 10. 运行
 
 先在工作空间根目录下source环境变量。
+
 ```bash
 source ./install/setup.bash
 ```
@@ -230,7 +231,6 @@ export QT_ENABLE_HIGHDPI_SCALING=0
 ~/nav2_ws/scripts/simu_nav.sh
 ```
 
-
 > ```bash
 > source ./install/setup.bash
 > ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
@@ -244,7 +244,6 @@ export QT_ENABLE_HIGHDPI_SCALING=0
 ```bash
 ~/nav2_ws/scripts/simu_map.sh
 ```
-
 
 > ```bash
 > source ./install/setup.bash
