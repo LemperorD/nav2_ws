@@ -137,9 +137,9 @@ sudo ldconfig
 
 [MVS下载中心](https://www.hikrobotics.com/cn/machinevision/service/download/?module=0)
 
-下载linux版本的MVS并安装其中的deb包，MVS会安装在``/opt``目录下
+下载linux版本的MVS并安装其中的deb包，**注意与自己使用的cpu架构对应**
 
-然后运行下述命令来删除海康的libusb库以防止污染环境
+MVS会安装在``/opt``目录下， 然后运行下述命令来删除海康的libusb库以防止污染环境
 
 ```bash
 sudo rm -rf /opt/MVS/lib/64/libusb-1.0.so.0
