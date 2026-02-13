@@ -51,7 +51,11 @@ public:
   float readFloatLE(const uint8_t *src);
 
   void sendDataFrame(const uint8_t* data, size_t len);
+
+public: // 在模板类中外部调用数据帧接收函数，需要根据不同数据帧类型进行适配，返回指向当前有效帧数据的指针
   uint8_t* receiveDataFrame();
+
+public: // 数据帧全局变量
   std::array<uint8_t, 23> frame_buffer_;
 
 private:
@@ -66,15 +70,21 @@ private:
   // ---- CRC8（电控同款：RM常用表驱动，poly=0x31, init=0xFF） ----
   static uint8_t crc8_calc(const uint8_t* p, size_t len);
 
-private:
   void openSerialPort(const std::string& port_name, int baud_rate);
   std::string findSerialPort();
   void configureSerialPort(int baud_rate);
 
+  void tryReconnect();
+
+private:
   rclcpp::Node* node_{nullptr};
   int fd_ = -1;
   bool running_ = false;
+  std::string serial_port_ = "/dev/ttyACM0";
+  int baud_rate_ = 115200;
   std::thread timer_thread_;
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
+  std::chrono::steady_clock::time_point last_received_time_;
+  std::chrono::steady_clock::time_point last_reconnect_time_;
 };

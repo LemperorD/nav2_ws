@@ -22,13 +22,15 @@ uint8_t SerialCommunicationClass::crc8_calc(const uint8_t* p, size_t len) {
 SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port, int baud_rate)
   : node_(node)
 {
-  if (!serial_port.empty()) {
-    openSerialPort(serial_port, baud_rate);
+  serial_port_ = serial_port; baud_rate_ = baud_rate; // 保存为全局变量
+
+  if (!serial_port_.empty()) {
+    openSerialPort(serial_port_, baud_rate_);
   } else {
     std::cout << termcolor::yellow << "No serial port specified, auto-detecting..." << termcolor::reset << std::endl;
     std::string port = findSerialPort();
     if (!port.empty()) {
-      openSerialPort(port, baud_rate);
+      openSerialPort(port, baud_rate_);
     } else {
       std::cerr << termcolor::red << "No serial port found." << termcolor::reset <<std::endl;
     }
@@ -36,12 +38,15 @@ SerialCommunicationClass::SerialCommunicationClass(rclcpp::Node* node, const std
 
   running_ = true;
   timer_thread_ = std::thread(&SerialCommunicationClass::timerThread, this);
+
+  last_received_time_ = std::chrono::steady_clock::now();
+  last_reconnect_time_ = std::chrono::steady_clock::now();
 }
 
 SerialCommunicationClass::~SerialCommunicationClass() {
   running_ = false;
   if (timer_thread_.joinable()) timer_thread_.join();
-  if (fd_ >= 0) ::close(fd_);
+  if (fd_ >= 0) close(fd_);
 }
 
 void SerialCommunicationClass::openSerialPort(const std::string& port_name, int baud_rate)
@@ -50,7 +55,7 @@ void SerialCommunicationClass::openSerialPort(const std::string& port_name, int 
     if (fd_ == -1) {
       std::cerr << termcolor::red << "Failed to open serial port: " << strerror(errno) << termcolor::reset<< std::endl;
     } else {
-      printf("\033[31m[ERROR] Serial port opened: %s\033[0m\n", port_name.c_str());
+      printf("\033[32mSerial port opened: %s\033[0m\n", port_name.c_str());
       configureSerialPort(baud_rate);
       printf("\033[32mSerial initialized: %s\033[0m\n", port_name.c_str());
     }
@@ -266,11 +271,27 @@ void SerialCommunicationClass::processFrame(const uint8_t* data) {
 }
 
 void SerialCommunicationClass::timerCallback() {
-  if (fd_ < 0) 
-  {
-    printf("Serial port not available in timerCallback\n");
+  // 检查串口状态
+  if (fd_ < 0) {
+    if (std::chrono::steady_clock::now() - last_reconnect_time_ > std::chrono::seconds(3)) {
+      std::cerr << "Serial port not available, trying reconnect" << std::endl;
+      tryReconnect();
+    }
     return;
   }
+  if (std::chrono::steady_clock::now() - last_received_time_ > std::chrono::seconds(3)) {
+    if (std::chrono::steady_clock::now() - last_reconnect_time_ > std::chrono::seconds(3)) {
+      std::cerr << "No data received, trying reconnect" << std::endl;
+      tryReconnect();
+    }
+    return;
+  }
+
+  // if (fd_ < 0) 
+  // {
+  //   printf("Serial port not available in timerCallback\n");
+  //   return;
+  // }
 
   if (buffer_index_ >= BUFFER_SIZE - 64) {
     std::cout << termcolor::yellow << "Buffer near full, clearing" << termcolor::reset << std::endl;
@@ -289,6 +310,30 @@ void SerialCommunicationClass::timerCallback() {
     buffer_index_ += n;
     processBuffer();
   }
+}
+
+void SerialCommunicationClass::tryReconnect() {
+  last_reconnect_time_ = std::chrono::steady_clock::now();
+  if (fd_ >= 0) {
+    close(fd_);
+    fd_ = -1;
+  }
+  buffer_index_ = 0;
+
+  if (!serial_port_.empty()) {
+    openSerialPort(serial_port_, baud_rate_);
+  } else {
+    std::cout << termcolor::yellow << "No serial port specified, auto-detecting..." << termcolor::reset << std::endl;
+    std::string port = findSerialPort();
+    if (!port.empty()) {
+      openSerialPort(port, baud_rate_);
+    } else {
+      std::cerr << termcolor::red << "waiting..." << termcolor::reset <<std::endl;
+    }
+  }
+
+  last_reconnect_time_ = std::chrono::steady_clock::now();
+  last_received_time_ = std::chrono::steady_clock::now();
 }
 
 void SerialCommunicationClass::timerThread() {
@@ -313,10 +358,10 @@ void SerialCommunicationClass::writeFloatLE(uint8_t *dst, float value)
 float SerialCommunicationClass::readFloatLE(const uint8_t *src)
 {
   uint32_t bits =
-      (static_cast<uint32_t>(src[0])) |
-      (static_cast<uint32_t>(src[1]) << 8) |
-      (static_cast<uint32_t>(src[2]) << 16) |
-      (static_cast<uint32_t>(src[3]) << 24);
+    (static_cast<uint32_t>(src[0])) |
+    (static_cast<uint32_t>(src[1]) << 8) |
+    (static_cast<uint32_t>(src[2]) << 16) |
+    (static_cast<uint32_t>(src[3]) << 24);
 
   float value = 0.0f;
   std::memcpy(&value, &bits, sizeof(float));
