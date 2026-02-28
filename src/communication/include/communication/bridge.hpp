@@ -79,6 +79,7 @@ private:
   bool angle_calibrated_ = false;
   std::shared_ptr<SerialCommunicationClass> com_;
 
+  // 编解码桥接对象
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
   std::shared_ptr<RosSerialBridge<std_msgs::msg::Float32>> bridge_Yaw_mcu_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_TESspeed_mcu_;
