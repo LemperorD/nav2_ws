@@ -19,6 +19,8 @@
 
 ## 1. 拉取工作空间的远端仓库并安装子模块
 
+后续脚本文件大多数与主文件夹有关，所以**强烈建议安装在主文件夹**下，否则需要自行修改大量脚本文件
+
 ```bash
 git clone https://github.com/LemperorD/nav2_ws.git
 ```
@@ -280,6 +282,8 @@ pip install flask-socketio
 ├── serviceInstall.txt			# 调试命令，更方便粘贴
 └── uninstall.sh				# 卸载脚本（需提供root权限）
 ```
+
+> service文件内部使用绝对路径，所以需要根据自己的用户名进行更改
 
 安装命令：
 
