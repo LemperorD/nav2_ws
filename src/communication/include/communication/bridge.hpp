@@ -13,6 +13,7 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include "communication/ros_serial_bridge.hpp"
 #include "communication/Com.h"
@@ -49,6 +50,7 @@ private: // 编解码函数
   uint8_t* encodeTwist(const geometry_msgs::msg::Twist& msg);
   std_msgs::msg::Float32 decodeYaw(const uint8_t* payload);
   geometry_msgs::msg::Twist decodeTESspeed(const uint8_t* payload);
+  geometry_msgs::msg::Point decodeEnemyPos(const uint8_t* payload);
 
 private: // 调试小陀螺下角度误差，进行转换
   inline geometry_msgs::msg::Twist transformVelocityToChassis(const geometry_msgs::msg::Twist & twist_in, double yaw_diff);
@@ -80,6 +82,7 @@ private:
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_twist_pc_;
   std::shared_ptr<RosSerialBridge<std_msgs::msg::Float32>> bridge_Yaw_mcu_;
   std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Twist>> bridge_TESspeed_mcu_;
+  std::shared_ptr<RosSerialBridge<geometry_msgs::msg::Point>> bridge_EnemyPos_mcu_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;

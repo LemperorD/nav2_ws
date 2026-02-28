@@ -58,6 +58,16 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
       std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get()),
       nullptr
     );
+  
+  bridge_EnemyPos_mcu_ = std::make_shared<RosSerialBridge
+    <geometry_msgs::msg::Point>>(
+      this, "/serial/EnemyPos", false,
+      nullptr,
+      std::bind(&BridgeNode::decodeEnemyPos, this, std::placeholders::_1),
+      nullptr,
+      std::bind(&SerialCommunicationClass::receiveDataFrame, com_.get()),
+      nullptr
+    );
 
   gimbal_vision_timer_ = this->create_wall_timer(
   std::chrono::milliseconds(30),
@@ -128,7 +138,7 @@ std_msgs::msg::Float32 BridgeNode::decodeYaw(const uint8_t* payload)
   std_msgs::msg::Float32 msg;
   std::memcpy(&yaw_diff_, payload + 7, sizeof(float));
   msg.data = yaw_diff_;
-  // publishTransformGimbalYaw(msg.data); // 经调试后决定不在这里发布TF
+  // publishTransformGimbalYaw(msg.data);
   return msg;
 }
 
@@ -136,6 +146,16 @@ geometry_msgs::msg::Twist BridgeNode::decodeTESspeed(const uint8_t* payload)
 {
   geometry_msgs::msg::Twist msg;
   msg.angular.z = static_cast<double>(com_->readFloatLE(&payload[3]));
+  return msg;
+}
+
+geometry_msgs::msg::Point BridgeNode::decodeEnemyPos(const uint8_t* payload)
+{
+  geometry_msgs::msg::Point msg;
+  int16_t x, y;
+  std::memcpy(&x, payload + 11, sizeof(int16_t));
+  std::memcpy(&y, payload + 13, sizeof(int16_t));
+  msg.x = static_cast<double>(x); msg.y = static_cast<double>(y);
   return msg;
 }
 
