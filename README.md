@@ -253,7 +253,7 @@ export QT_ENABLE_HIGHDPI_SCALING=0
 
 具体的更改地图、调参等功能请移步``tutorial.md``查看。
 
-## 10. 假裁判系统及操作手客户端
+## 11. 假裁判系统及操作手客户端
 
 使用假裁判系统及操作手客户端需安装如下python第三方库
 
@@ -267,3 +267,28 @@ pip install flask-socketio
 使用``./scripts/local_referee_2350.sh``在``localhost:2350``打开网页端假裁判系统
 
 使用``./scripts/local_player_5000.sh``在``localhost:5000``打开网页端假操作手客户端
+
+## 12. 自启动脚本
+
+在``~/nav2_ws/autostart``文件夹下存放着脚本自启动服务文件与对应的安装/卸载脚本，可根据需求自行调整。
+
+``~/nav2_ws/autostart``文件夹内部的文件架构如下：
+
+```bash
+├── install.sh					# 安装脚本（需提供root权限）
+├── nav_auto_launch.service		# 脚本自启动服务，可在内部调整自启动脚本文件与脚本启动位置
+├── serviceInstall.txt			# 调试命令，更方便粘贴
+└── uninstall.sh				# 卸载脚本（需提供root权限）
+```
+
+安装命令：
+
+```bash
+cd ~/nav2_ws/autostart && sudo ./install.sh
+```
+
+卸载命令：
+
+```bash
+cd ~/nav2_ws/autostart && sudo ./uninstall.sh
+```

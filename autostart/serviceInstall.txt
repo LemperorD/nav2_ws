@@ -1,0 +1,9 @@
+/etc/systemd/system/nav_auto_launch.service
+
+sudo cp ./nav_auto_launch.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable nav_auto_launch.service
+sudo systemctl start nav_auto_launch.service
+sudo systemctl status nav_auto_launch.service
+
+sudo systemctl enable/disable/start/stop/status nav_auto_launch.service

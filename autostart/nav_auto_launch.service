@@ -1,0 +1,12 @@
+[Unit]
+Description=Sentry Nav Auto Launch Service
+After=network.target network-online.target
+
+[Service]
+Type=simple
+User=sentry-nav
+ExecStart=/bin/bash -c "/home/sentry-nav/nav2_ws/scripts/floor10_nav.sh"
+WorkingDirectory=/home/sentry-nav/nav2_ws
+
+[Install]
+WantedBy=multi-user.target
