@@ -29,7 +29,7 @@ Examples:
 EOF
 }
 
-OPEN_TERMINALS=1    # 默认在两个终端中并行打开（符合用户要求）
+OPEN_TERMINALS=1    # 默认在两个终端中并行打开
 while [ "${1-}" != "" ] && [[ "${1-}" == --* || "${1-}" == -?* ]]; do
         case "$1" in
         --terminals|-t)
@@ -107,8 +107,10 @@ case "$MODE" in
             # Open separate gnome-terminal windows for behavior and navigation
             if command -v gnome-terminal >/dev/null 2>&1; then
                 WORKDIR="$HOME/nav2_ws"
-                BEHAVIOR_CMD="cd $WORKDIR && source install/setup.bash && \"$0\" behavior $BEHAVIOR_TREE; exec bash"
-                NAV_CMD="cd $WORKDIR && source install/setup.bash && \"$0\" nav; exec bash"
+                # Use absolute script path to avoid $0/relative-path issues in child terminals
+                SCRIPT_PATH="$WORKDIR/scripts/floor10_nav.sh"
+                BEHAVIOR_CMD="cd $WORKDIR && source install/setup.bash && \"$SCRIPT_PATH\" behavior $BEHAVIOR_TREE; exec bash"
+                NAV_CMD="cd $WORKDIR && source install/setup.bash && \"$SCRIPT_PATH\" nav; exec bash"
                 gnome-terminal --window --title="behavior" -- bash -lc "$BEHAVIOR_CMD" &
                 gnome-terminal --window --title="navigation" -- bash -lc "$NAV_CMD" &
                 exit 0
