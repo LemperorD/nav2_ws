@@ -1,6 +1,6 @@
 [submodule "src/pb2025_sentry_nav"]
 	path = src/pb2025_sentry_nav
-	url = https://github.com/LemperorD/pb2025_sentry_nav.git
+	url = https://github.com/TFHGN/pb2025_sentry_nav.git
 [submodule "src/pb2025_sentry_behavior"]
 	path = src/pb2025_sentry_behavior
 	url = https://github.com/LemperorD/pb2025_sentry_behavior.git
