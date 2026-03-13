@@ -13,7 +13,7 @@ def generate_launch_description():
 
     declare_namespace = DeclareLaunchArgument(
         "namespace",
-        default_value="red_standard_robot1",
+        default_value="",
         description="Robot namespace",
     )
 

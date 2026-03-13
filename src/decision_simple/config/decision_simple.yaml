@@ -30,8 +30,8 @@
     supply_y: 0.0
     supply_yaw: 0.0
 
-    default_x: 4.65
-    default_y: -3.5
+    default_x: 1.0   #4.65
+    default_y: -1.0  #-3.5
     default_yaw: 0.0
 
     # thresholds（来自 XML）
