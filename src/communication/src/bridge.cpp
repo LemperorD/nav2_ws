@@ -28,6 +28,9 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
+
+  lidar_connected_ = isLidarConnected();
+  std::cout << "Lidar connected: " << std::boolalpha << lidar_connected_ << std::endl;
   
   bridge_twist_pc_ = std::make_shared<RosSerialBridge
     <geometry_msgs::msg::Twist>>(
@@ -168,7 +171,7 @@ void BridgeNode::publishTransformGimbalVision()
       "odom", "base_footprint",
       tf2::TimePointZero);
   } catch (tf2::TransformException &ex) {
-    RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
+    if(lidar_connected_) RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
     return;
   }
 
