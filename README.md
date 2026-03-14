@@ -260,7 +260,7 @@ export QT_ENABLE_HIGHDPI_SCALING=0
 使用假裁判系统及操作手客户端需安装如下python第三方库
 
 ```bash
-pip install engineio
+pip install python-engineio
 pip install Flask
 pip install flask-cors
 pip install flask-socketio
