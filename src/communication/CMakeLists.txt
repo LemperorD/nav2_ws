@@ -15,6 +15,8 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(pb_rm_interfaces REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 add_library(communication SHARED src/Com.cpp)
 target_include_directories(communication PUBLIC
@@ -31,6 +33,7 @@ ament_target_dependencies(bridge_node
   geometry_msgs
   tf2_ros
   tf2
+  pb_rm_interfaces
 )
 
 rclcpp_components_register_node(bridge_node

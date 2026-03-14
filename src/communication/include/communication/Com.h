@@ -1,27 +1,31 @@
 #pragma once
+
 #include <rclcpp/rclcpp.hpp>
 #include <array>
 #include <functional>
 #include <string>
 #include <thread>
+#include <atomic>
+#include <chrono>
 
 using Array25 = std::array<uint8_t, 25>;
 
 // ================= BR 串口协议常量 =================
-// SOF = 'B' 'R'  (0x42 0x52)(Beihang Robotics)
+// SOF = 'B' 'R'  (0x42 0x52)
 static constexpr uint8_t FRAME_HEADER1 = 0x42;
 static constexpr uint8_t FRAME_HEADER2 = 0x52;
 
-// 自定义命令码：25字节裸数组（两端统一）
-static constexpr uint8_t COMMAND_CODE_ARRAY25 = 0xCD;
+// 自定义命令码
+static constexpr uint8_t COMMAND_CODE_MOTION  = 0xCD;  // 运动/云台帧
+static constexpr uint8_t COMMAND_CODE_REFEREE = 0xD1;  // 新裁判帧
 
-// 缓冲与帧尺寸（最小帧 = 2B SOF + 1B CMD + 1B LEN + 1B CRC8 = 5）
-static constexpr size_t BUFFER_SIZE    = 256;
-static constexpr size_t FRAME_MIN_SIZE = 5;
-static constexpr size_t MAX_FRAME_LEN  = 128;
-static constexpr size_t MAX_FRAMES_PER_LOOP = 10; // 避免长时间占用：一次最多处理10帧
+// 缓冲与帧尺寸
+static constexpr size_t BUFFER_SIZE = 256;
+static constexpr size_t FRAME_MIN_SIZE = 5;   // SOF2 + CMD1 + LEN1 + CRC1
+static constexpr size_t MAX_FRAME_LEN = 128;
+static constexpr size_t MAX_FRAMES_PER_LOOP = 10;
 
-// ---------------- CRC8（RM常用表驱动：poly=0x31, init=0xFF） ----------------
+// ---------------- CRC8 ----------------
 static const uint8_t CRC8_INIT = 0xFF;
 static const uint8_t CRC8_TABLE[256] = {
   0x00,0x5e,0xbc,0xe2,0x61,0x3f,0xdd,0x83,0xc2,0x9c,0x7e,0x20,0xa3,0xfd,0x1f,0x41,
@@ -42,9 +46,13 @@ static const uint8_t CRC8_TABLE[256] = {
   0x74,0x2a,0xc8,0x96,0x15,0x4b,0xa9,0xf7,0xb6,0xe8,0x0a,0x54,0xd7,0x89,0x6b,0x35
 };
 
-class SerialCommunicationClass {
+class SerialCommunicationClass
+{
 public:
-  explicit SerialCommunicationClass(rclcpp::Node* node, const std::string& serial_port = "", int baud_rate = 115200);
+  explicit SerialCommunicationClass(
+    rclcpp::Node* node,
+    const std::string& serial_port = "",
+    int baud_rate = 115200);
   ~SerialCommunicationClass();
 
   void writeFloatLE(uint8_t *dst, float value);
@@ -52,39 +60,51 @@ public:
 
   void sendDataFrame(const uint8_t* data, size_t len);
 
-public: // 在模板类中外部调用数据帧接收函数，需要根据不同数据帧类型进行适配，返回指向当前有效帧数据的指针
+public:
+  // 旧运动/云台帧
   uint8_t* receiveDataFrame();
 
-public: // 数据帧全局变量
-  std::array<uint8_t, 23> frame_buffer_;
+  // 新裁判帧
+  const uint8_t* receiveRefereeFrame();
+  bool hasNewRefereeFrame() const;
+  void clearRefereeFrameFlag();
+
+public:
+  // 旧帧缓存
+  std::array<uint8_t, 23> frame_buffer_{};
+
+  // 新裁判 13 字节缓存
+  std::array<uint8_t, 13> referee_frame_buffer_{};
+  std::atomic_bool referee_frame_ready_{false};
 
 private:
-  // 轮询线程（~1ms）
   void timerThread();
   void timerCallback();
 
-  // 解析
   void processBuffer();
   void processFrame(const uint8_t* data);
 
-  // ---- CRC8（电控同款：RM常用表驱动，poly=0x31, init=0xFF） ----
   static uint8_t crc8_calc(const uint8_t* p, size_t len);
+  static bool isSupportedCommand(uint8_t cmd);
 
   void openSerialPort(const std::string& port_name, int baud_rate);
   std::string findSerialPort();
   void configureSerialPort(int baud_rate);
-
   void tryReconnect();
 
 private:
   rclcpp::Node* node_{nullptr};
   int fd_ = -1;
   bool running_ = false;
+
   std::string serial_port_ = "/dev/ttyACM0";
   int baud_rate_ = 115200;
+
   std::thread timer_thread_;
+
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
+
   std::chrono::steady_clock::time_point last_received_time_;
   std::chrono::steady_clock::time_point last_reconnect_time_;
 };
