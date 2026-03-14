@@ -1,9 +1,12 @@
 #pragma once
+
 #include <rclcpp/rclcpp.hpp>
 #include <array>
 #include <functional>
 #include <string>
 #include <thread>
+#include <atomic>
+#include <chrono>
 
 using Array25 = std::array<uint8_t, 25>;
 
@@ -13,7 +16,8 @@ static constexpr uint8_t FRAME_HEADER1 = 0x42;
 static constexpr uint8_t FRAME_HEADER2 = 0x52;
 
 // 自定义命令码：25字节裸数组（两端统一）
-static constexpr uint8_t COMMAND_CODE_ARRAY25 = 0xCD;
+static constexpr uint8_t COMMAND_CODE_MOTION = 0xCD;
+static constexpr uint8_t COMMAND_CODE_REFEREE = 0xD1;
 
 // 缓冲与帧尺寸（最小帧 = 2B SOF + 1B CMD + 1B LEN + 1B CRC8 = 5）
 static constexpr size_t BUFFER_SIZE    = 256;
@@ -54,9 +58,14 @@ public:
 
 public: // 在模板类中外部调用数据帧接收函数，需要根据不同数据帧类型进行适配，返回指向当前有效帧数据的指针
   uint8_t* receiveDataFrame();
+  uint8_t* receiveRefereeFrame();
+  bool hasNewRefereeFrame() const;
+  void clearRefereeFrameFlag();
 
 public: // 数据帧全局变量
-  std::array<uint8_t, 23> frame_buffer_;
+  std::array<uint8_t, 23> frame_buffer_{};
+  std::array<uint8_t, 13> referee_frame_buffer_{};
+  std::atomic_bool referee_frame_ready_{false};
 
 private:
   // 轮询线程（~1ms）
@@ -69,6 +78,7 @@ private:
 
   // ---- CRC8（电控同款：RM常用表驱动，poly=0x31, init=0xFF） ----
   static uint8_t crc8_calc(const uint8_t* p, size_t len);
+  static bool isSupportedCommand(uint8_t cmd);
 
   void openSerialPort(const std::string& port_name, int baud_rate);
   std::string findSerialPort();
@@ -80,11 +90,15 @@ private:
   rclcpp::Node* node_{nullptr};
   int fd_ = -1;
   bool running_ = false;
+
   std::string serial_port_ = "/dev/ttyACM0";
   int baud_rate_ = 115200;
+
   std::thread timer_thread_;
+
   std::array<uint8_t, BUFFER_SIZE> buffer_{};
   size_t buffer_index_ = 0;
+
   std::chrono::steady_clock::time_point last_received_time_;
   std::chrono::steady_clock::time_point last_reconnect_time_;
 };

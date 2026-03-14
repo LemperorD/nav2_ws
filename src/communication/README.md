@@ -1,9 +1,11 @@
 # 北航Transistor战队2026赛季哨兵底盘通信部分
 
 ## 0. 前言
+
 本赛季上位机与C板的通信部分使用了C++模板类以提升代码复用率，详情可见``include/ros_serial_bridge.hpp``。
 
 功能包代码架构如下：
+
 ```bash
 ├── CMakeLists.txt
 ├── config
@@ -37,3 +39,6 @@
 
 ### 1.3 完善消息类型相关的头文件以及CMakeLists.txt & package.xml
 
+## 2. TODOLIST
+
+- [] 将模板类更新为支持多输入多输出
