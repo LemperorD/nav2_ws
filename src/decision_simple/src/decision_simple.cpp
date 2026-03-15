@@ -33,8 +33,8 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   supply_y_   = this->declare_parameter<double>("supply_y", 0.0);
   supply_yaw_ = this->declare_parameter<double>("supply_yaw", 0.0);
 
-  default_x_   = this->declare_parameter<double>("default_x", 4.65);
-  default_y_   = this->declare_parameter<double>("default_y", -3.5);
+  default_x_   = this->declare_parameter<double>("default_x", 3.475);
+  default_y_   = this->declare_parameter<double>("default_y", 0.5);
   default_yaw_ = this->declare_parameter<double>("default_yaw", 0.0);
 
   default_arrive_xy_tol_ = this->declare_parameter<double>("default_arrive_xy_tol", 0.30);   

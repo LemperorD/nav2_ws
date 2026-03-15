@@ -63,7 +63,7 @@ public: // 在模板类中外部调用数据帧接收函数，需要根据不同
   void clearRefereeFrameFlag();
 
 public: // 数据帧全局变量
-  std::array<uint8_t, 23> frame_buffer_{};
+  std::array<uint8_t, 26> frame_buffer_{};
   std::array<uint8_t, 13> referee_frame_buffer_{};
   std::atomic_bool referee_frame_ready_{false};
 

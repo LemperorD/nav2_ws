@@ -259,10 +259,6 @@ inline geometry_msgs::msg::Twist BridgeNode::transformVelocityToChassis(
 
 void BridgeNode::publishRefereeData()
 {
-  if (!com_->hasNewRefereeFrame()) {
-    std::cerr << "No new referee frame available." << std::endl;
-    return;
-  }
 
   const uint8_t *payload = com_->receiveRefereeFrame();
   if (payload == nullptr) {
@@ -273,7 +269,8 @@ void BridgeNode::publishRefereeData()
   // const uint8_t game_type = payload[0] >> 4; // TODO: 解析比赛类型数据
   uint8_t game_progress;
   std::memcpy(&game_progress, payload, sizeof(uint8_t)); // 解析比赛进程数据
-  game_progress = (game_progress << 4) >> 4; // 取高4位作为比赛进程
+  game_progress = (game_progress & 0x0F); // 取高4位作为比赛进程
+
 
   uint16_t current_hp, ammo17, heat1, heat2; // 当前血量、剩余17mm弹量、热量1、热量2
   std::memcpy(&current_hp, payload + 1, sizeof(uint16_t));
