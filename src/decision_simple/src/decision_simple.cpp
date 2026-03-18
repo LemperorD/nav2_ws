@@ -227,7 +227,6 @@ void DecisionSimple::tick()
   else setChassisMode(at_center ? littleTES : chassisFollowed);   
 
   const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_, default_yaw_);
-  RCLCPP_INFO(this->get_logger(), "Publishing default goal to (%.2f, %.2f, %.2f)", default_x_, default_y_, default_yaw_);
   publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
 }
 
@@ -361,10 +360,8 @@ void DecisionSimple::publishChassisMode(chassisMode mode)
 // 只在发生变化时发一次，避免刷屏
 void DecisionSimple::setChassisMode(chassisMode mode)
 {
-  if (current_chassis_mode_ == mode) return;
   current_chassis_mode_ = mode;
   publishChassisMode(mode);
-  RCLCPP_INFO(this->get_logger(), "ChassisMode -> %u", static_cast<unsigned>(mode));
 }
 
 void DecisionSimple::publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz)

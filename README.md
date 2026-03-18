@@ -8,7 +8,7 @@
   <img src="docs/images/transistor_code.png" width="400" height="400">
 </div>
 
-本仓库为北航Transistor战队2026赛季哨兵机器人的工作空间，参考了深北莫北极熊战队开源的导航功能包，丰富了假裁判系统等功能，同时做了一些修改。
+本仓库为北航Transistor战队2026赛季哨兵机器人的工作空间，参考了[深北莫北极熊战队开源的导航功能包](https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_sentry_nav.git)，丰富了假裁判系统等功能，同时做了一些修改。
 
 本文档旨在帮助导航小白快速安装2025Transistor哨兵工作空间。
 
