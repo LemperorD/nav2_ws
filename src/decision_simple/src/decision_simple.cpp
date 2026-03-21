@@ -7,7 +7,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"                           
 #include "tf2/exceptions.h"                     
-
+#include "std_msgs/msg/u_int8.hpp"
 namespace decision_simple
 {
 
@@ -23,7 +23,10 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
 
   chassis_mode_topic_ = this->declare_parameter<std::string>("chassis_mode_topic", "chassis_mode");
   debug_attack_pose_topic_ = this->declare_parameter<std::string>("debug_attack_pose_topic", "debug_attack_pose");
-
+  game_status_topic_ = this->declare_parameter<std::string>("referee_game_status_topic", "referee/game_status");
+  require_game_running_ =this->declare_parameter<bool>("require_game_running", true);
+  start_delay_sec_ =this->declare_parameter<double>("start_delay_sec", 5.0);
+  default_spin_keep_xy_tol_ =this->declare_parameter<double>("default_spin_keep_xy_tol", 0.80);
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   detector_armors_topic_ = this->declare_parameter<std::string>("detector_armors_topic", "detector/armors");
   tracker_target_topic_  = this->declare_parameter<std::string>("tracker_target_topic",  "tracker/target");
@@ -40,12 +43,12 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   default_arrive_xy_tol_ = this->declare_parameter<double>("default_arrive_xy_tol", 0.30);   
   supply_arrive_xy_tol_  = this->declare_parameter<double>("supply_arrive_xy_tol", 0.30);   
 
-  hp_enter_supply_ = this->declare_parameter<int>("hp_enter_supply", 120);
-  hp_exit_supply_  = this->declare_parameter<int>("hp_exit_supply", 300);
+  hp_enter_supply_ = this->declare_parameter<int>("hp_survival_enter", 120);
+  hp_exit_supply_  = this->declare_parameter<int>("hp_survival_exit", 300);
   ammo_min_        = this->declare_parameter<int>("ammo_min", 0);
 
   combat_max_distance_ = this->declare_parameter<double>("combat_max_distance", 8.0);
-  attack_hold_sec_     = this->declare_parameter<double>("attack_hold_sec", 1.0);
+  attack_hold_sec_     = this->declare_parameter<double>("combat_cooldown_sec", 1.0);
 
   attacked_hold_sec_   = this->declare_parameter<double>("attacked_hold_sec", 1.5);          
 
@@ -68,7 +71,9 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   robot_status_sub_ = this->create_subscription<pb_rm_interfaces::msg::RobotStatus>(
     robot_status_topic_, rclcpp::QoS(10),
     std::bind(&DecisionSimple::onRobotStatus, this, std::placeholders::_1));
-
+  game_status_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
+    game_status_topic_, rclcpp::QoS(10),
+    std::bind(&DecisionSimple::onGameStatus, this, std::placeholders::_1));
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   armors_sub_ = this->create_subscription<auto_aim_interfaces::msg::Armors>(
     detector_armors_topic_, rclcpp::QoS(10),
@@ -101,7 +106,32 @@ void DecisionSimple::onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::Sha
   last_robot_status_ = *msg;
   has_robot_status_ = true;
 }
+void DecisionSimple::onGameStatus(const std_msgs::msg::UInt8::SharedPtr msg)
+{
+  std::lock_guard<std::mutex> lk(mtx_);
 
+  const uint8_t prev = last_game_status_;
+  last_game_status_ = msg->data;
+  has_game_status_ = true;
+  // 从“非比赛中” -> “比赛中(4)”，开始新一轮倒计时
+  if (prev != 4 && last_game_status_ == 4) {
+    match_started_ = true;
+    match_start_time_ = this->now();
+    RCLCPP_INFO(this->get_logger(),
+      "Game started detected, delaying decision for %.1f seconds",
+      start_delay_sec_);
+  }
+
+  // 从“比赛中(4)” -> “非比赛中”，复位，为下一局做准备
+  if (prev == 4 && last_game_status_ != 4) {
+    match_started_ = false;
+    match_start_time_ = rclcpp::Time(0, 0, this->get_clock()->get_clock_type());
+     //清掉上一局遗留的默认点小陀螺锁存
+    default_spin_latched_ = false;
+    RCLCPP_INFO(this->get_logger(),
+      "Game left running state, reset match-start gate.");
+  }
+}
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
 void DecisionSimple::onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg)
 {
@@ -122,7 +152,9 @@ void DecisionSimple::tick()
   // snapshot
   pb_rm_interfaces::msg::RobotStatus rs;
   bool has_rs = false;
-
+  bool has_gs = false;
+  bool match_started = false;
+  rclcpp::Time match_start_time;
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   auto_aim_interfaces::msg::Armors armors;
   bool has_armors = false;
@@ -133,7 +165,9 @@ void DecisionSimple::tick()
     std::lock_guard<std::mutex> lk(mtx_);
     has_rs = has_robot_status_;
     if (has_rs) rs = last_robot_status_;
-
+    has_gs = has_game_status_;
+    match_started = match_started_;
+    match_start_time = match_start_time_;
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     has_armors = has_armors_;
     if (has_armors) armors = last_armors_;
@@ -147,6 +181,28 @@ void DecisionSimple::tick()
   }
 
   const auto now = this->now();
+  // 比赛开始+5s延时
+  if (require_game_running_) {
+    if (!has_gs) {
+      RCLCPP_DEBUG_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,"Waiting for game_status...");
+      return;
+    }
+
+    if (!match_started) {
+      RCLCPP_DEBUG_THROTTLE(
+        this->get_logger(), *this->get_clock(), 2000,"Waiting for match start (game_status == 4)...");
+      return;
+    }
+
+    const double elapsed = (now - match_start_time).seconds();
+    if (elapsed < start_delay_sec_) {
+      RCLCPP_INFO_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,"Match started, delaying decision: %.1f / %.1f s",
+        elapsed, start_delay_sec_);
+      return;
+    }
+  }
 
   // 受到攻击检测
   if (rs.is_hp_deduced) {
@@ -158,12 +214,13 @@ void DecisionSimple::tick()
 
   // 到达判断（中心点/补给点）
   const bool at_center = isNear(default_x_, default_y_, default_arrive_xy_tol_);
+  const bool in_center_keep_spin = isNear(default_x_, default_y_, default_spin_keep_xy_tol_); // 确认是否在大圈
   const bool at_supply = isNear(supply_x_, supply_y_, supply_arrive_xy_tol_);
 
   // ================= 1) 补给保持 =================
   if (state_ == State::SUPPLY) {
     if (!isStatusRecovered(rs)) {
-     
+      default_spin_latched_ = false;   
       if (attacked_recent) setChassisMode(littleTES);             
       else setChassisMode(at_supply ? littleTES : goHome);        
 
@@ -177,7 +234,7 @@ void DecisionSimple::tick()
   // ================= 2) 状态差 -> 进补给 =================
   if (isStatusBad(rs)) {
     setState(State::SUPPLY);
-
+    default_spin_latched_ = false; 
     if (attacked_recent) setChassisMode(littleTES);               
     else setChassisMode(at_supply ? littleTES : goHome);          
 
@@ -200,7 +257,7 @@ void DecisionSimple::tick()
 
   if (enemy_recent) {
     setState(State::ATTACK);
-
+    default_spin_latched_ = false;
     if (attacked_recent) setChassisMode(littleTES);               
     else setChassisMode(chassisFollowed);                         
 
@@ -222,10 +279,18 @@ void DecisionSimple::tick()
 #endif
   // ================= 4) 默认：去中心点 =================
   setState(State::DEFAULT);
- 
-  if (attacked_recent) setChassisMode(littleTES);                
-  else setChassisMode(at_center ? littleTES : chassisFollowed);   
-
+  // 1. 先进入 0.3m 小圈 -> 小陀螺模式
+  if (at_center) {
+    default_spin_latched_ = true;
+  }
+  // 2. 出了 0.8m 大圈，取消陀螺
+  if (!in_center_keep_spin) {
+    default_spin_latched_ = false;
+  }
+  if (attacked_recent){setChassisMode(littleTES);             
+  } else {
+    setChassisMode(default_spin_latched_ ? littleTES : chassisFollowed);
+  }   
   const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_, default_yaw_);
   publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
 }

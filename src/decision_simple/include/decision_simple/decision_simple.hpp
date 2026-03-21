@@ -55,7 +55,7 @@ private:
   // helpers
   bool isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs) const;
   bool isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus & rs) const;
-
+ 
   geometry_msgs::msg::PoseStamped makePoseXYZYaw(const std::string & frame, double x, double y, double yaw) const;
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
@@ -77,7 +77,8 @@ private:
   void setChassisMode(chassisMode mode);                                
 
   void publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz);
-
+  //game status
+  void onGameStatus(const std_msgs::msg::UInt8::SharedPtr msg);
   // params
   std::string frame_id_{"map"};
   std::string base_frame_id_{"base_link"};                              
@@ -88,6 +89,7 @@ private:
   std::string chassis_mode_topic_{"chassis_mode"};
 
   std::string debug_attack_pose_topic_{"debug_attack_pose"};
+  std::string game_status_topic_{"referee/game_status"}
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   std::string detector_armors_topic_{"detector/armors"};
@@ -96,7 +98,7 @@ private:
 
   double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
   double default_x_{4.65}, default_y_{-3.5}, default_yaw_{0.0};
-
+  
 
   double default_arrive_xy_tol_{0.30};
   double supply_arrive_xy_tol_{0.30};
@@ -115,14 +117,16 @@ private:
   double default_goal_hz_{2.0};
   double supply_goal_hz_{2.0};
   double attack_goal_hz_{10.0};
-
+  //小陀螺保持半径
+  double default_spin_keep_xy_tol_{0.80};
+  bool default_spin_latched_{false};
   // pubs/subs
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_pose_pub_;
   rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr chassis_mode_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr debug_attack_pose_pub_;
 
   rclcpp::Subscription<pb_rm_interfaces::msg::RobotStatus>::SharedPtr robot_status_sub_;
-
+  rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr game_status_sub_;
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   rclcpp::Subscription<auto_aim_interfaces::msg::Armors>::SharedPtr armors_sub_;
   rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub_;
@@ -138,7 +142,8 @@ private:
   mutable std::mutex mtx_;
   pb_rm_interfaces::msg::RobotStatus last_robot_status_{};
   bool has_robot_status_{false};
-
+  bool require_game_running_{true};     // 是否必须等比赛开始再运行
+  double start_delay_sec_{5.0};         // 比赛开始后的等待秒数
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   auto_aim_interfaces::msg::Armors last_armors_{};
   bool has_armors_{false};
@@ -157,9 +162,12 @@ private:
   rclcpp::Time last_enemy_seen_{0, 0, RCL_ROS_TIME};
   geometry_msgs::msg::PoseStamped last_attack_goal_{};
   bool has_last_attack_goal_{false};
-
+  bool has_game_status_{false};
+  uint8_t last_game_status_{0};         // 这里存 game_progress
+  bool match_started_{false};
   // 最近一次被打时间（RobotStatus.is_hp_deduced）
   rclcpp::Time last_attacked_{0, 0, RCL_ROS_TIME};
+  rclcpp::Time match_start_time_{0, 0, RCL_ROS_TIME};
 };
 
 }  // namespace decision_simple
