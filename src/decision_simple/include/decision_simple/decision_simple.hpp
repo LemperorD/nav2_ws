@@ -89,7 +89,7 @@ private:
   std::string chassis_mode_topic_{"chassis_mode"};
 
   std::string debug_attack_pose_topic_{"debug_attack_pose"};
-  std::string game_status_topic_{"referee/game_status"}
+  std::string game_status_topic_{"referee/game_status"};
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   std::string detector_armors_topic_{"detector/armors"};
