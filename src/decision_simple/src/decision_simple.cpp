@@ -33,7 +33,7 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   supply_y_   = this->declare_parameter<double>("supply_y", 0.0);
   supply_yaw_ = this->declare_parameter<double>("supply_yaw", 0.0);
 
-  default_x_   = this->declare_parameter<double>("default_x", 3.475);
+  default_x_   = this->declare_parameter<double>("default_x", 2.0);
   default_y_   = this->declare_parameter<double>("default_y", 0.5);
   default_yaw_ = this->declare_parameter<double>("default_yaw", 0.0);
 
@@ -164,8 +164,7 @@ void DecisionSimple::tick()
   if (state_ == State::SUPPLY) {
     if (!isStatusRecovered(rs)) {
      
-      if (attacked_recent) setChassisMode(littleTES);             
-      else setChassisMode(at_supply ? littleTES : goHome);        
+      setChassisMode(chassisFollowed);                    
 
       const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_, supply_yaw_);
       publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
@@ -178,8 +177,7 @@ void DecisionSimple::tick()
   if (isStatusBad(rs)) {
     setState(State::SUPPLY);
 
-    if (attacked_recent) setChassisMode(littleTES);               
-    else setChassisMode(at_supply ? littleTES : goHome);          
+    setChassisMode(chassisFollowed);              
 
     const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_, supply_yaw_);
     publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
@@ -357,7 +355,6 @@ void DecisionSimple::publishChassisMode(chassisMode mode)
   chassis_mode_pub_->publish(m);
 }
 
-// 只在发生变化时发一次，避免刷屏
 void DecisionSimple::setChassisMode(chassisMode mode)
 {
   current_chassis_mode_ = mode;

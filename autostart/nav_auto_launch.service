@@ -5,7 +5,7 @@ After=network.target network-online.target
 [Service]
 Type=simple
 User=sentry-nav
-ExecStart=/bin/bash /home/sentry-nav/nav2_ws/scripts/floor10_nav_decision.sh
+ExecStart=/bin/bash -c "/home/sentry-nav/nav2_ws/scripts/ros2bag.sh & /home/sentry-nav/nav2_ws/scripts/floor10_nav_decision.sh"
 WorkingDirectory=/home/sentry-nav/nav2_ws
 Environment="DISPLAY=:0"
 Environment="XAUTHORITY=/home/sentry-nav/.Xauthority"

@@ -95,7 +95,7 @@ private:
 #endif
 
   double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
-  double default_x_{3.475}, default_y_{0.165}, default_yaw_{0.0};
+  double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};
 
 
   double default_arrive_xy_tol_{0.30};
