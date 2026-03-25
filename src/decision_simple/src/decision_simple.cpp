@@ -8,6 +8,7 @@
 #include "tf2/utils.h"                           
 #include "tf2/exceptions.h"                     
 #include "std_msgs/msg/u_int8.hpp"
+#include "pb_rm_interfaces/msg/game_status.hpp"
 namespace decision_simple
 {
 
@@ -71,7 +72,7 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
   robot_status_sub_ = this->create_subscription<pb_rm_interfaces::msg::RobotStatus>(
     robot_status_topic_, rclcpp::QoS(10),
     std::bind(&DecisionSimple::onRobotStatus, this, std::placeholders::_1));
-  game_status_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
+  game_status_sub_ = this->create_subscription<pb_rm_interfaces::msg::GameStatus>(
     game_status_topic_, rclcpp::QoS(10),
     std::bind(&DecisionSimple::onGameStatus, this, std::placeholders::_1));
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
@@ -106,12 +107,12 @@ void DecisionSimple::onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::Sha
   last_robot_status_ = *msg;
   has_robot_status_ = true;
 }
-void DecisionSimple::onGameStatus(const std_msgs::msg::UInt8::SharedPtr msg)
+void DecisionSimple::onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg)
 {
   std::lock_guard<std::mutex> lk(mtx_);
 
   const uint8_t prev = last_game_status_;
-  last_game_status_ = msg->data;
+  last_game_status_ = msg->game_progress;
   has_game_status_ = true;
   // 从“非比赛中” -> “比赛中(4)”，开始新一轮倒计时
   if (prev != 4 && last_game_status_ == 4) {
@@ -315,14 +316,14 @@ bool DecisionSimple::isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs) 
 {
   const int hp = static_cast<int>(rs.current_hp);
   const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-  return (hp < hp_enter_supply_) || (ammo < ammo_min_);
+  return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
 }
 
 bool DecisionSimple::isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus & rs) const
 {
   const int hp = static_cast<int>(rs.current_hp);
   const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-  return (hp >= hp_exit_supply_) && (ammo >= ammo_min_);
+  return (hp >= hp_exit_supply_) && (ammo > ammo_min_);
 }
 
 // 获取机器人在 map 下的位置

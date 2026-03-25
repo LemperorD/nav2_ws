@@ -9,11 +9,12 @@
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"          
+#include "pb_rm_interfaces/msg/game_status.hpp"
 #include "pb_rm_interfaces/msg/robot_status.hpp"
 #include "std_msgs/msg/u_int8.hpp"
-
 #include "tf2_ros/buffer.h"                                 
 #include "tf2_ros/transform_listener.h"
+
 
 // #define DECISION_SIMPLE_HAS_AUTO_AIM
 
@@ -78,7 +79,7 @@ private:
 
   void publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz);
   //game status
-  void onGameStatus(const std_msgs::msg::UInt8::SharedPtr msg);
+  void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
   // params
   std::string frame_id_{"map"};
   std::string base_frame_id_{"base_link"};                              
@@ -89,7 +90,7 @@ private:
   std::string chassis_mode_topic_{"chassis_mode"};
 
   std::string debug_attack_pose_topic_{"debug_attack_pose"};
-  std::string game_status_topic_{"referee/game_status"}
+  std::string game_status_topic_{"referee/game_status"};
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   std::string detector_armors_topic_{"detector/armors"};
@@ -126,7 +127,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr debug_attack_pose_pub_;
 
   rclcpp::Subscription<pb_rm_interfaces::msg::RobotStatus>::SharedPtr robot_status_sub_;
-  rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr game_status_sub_;
+  rclcpp::Subscription<pb_rm_interfaces::msg::GameStatus>::SharedPtr game_status_sub_;
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   rclcpp::Subscription<auto_aim_interfaces::msg::Armors>::SharedPtr armors_sub_;
   rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub_;
