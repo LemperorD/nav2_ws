@@ -8,7 +8,7 @@
 #include "tf2/utils.h"                           
 #include "tf2/exceptions.h"                     
 #include "std_msgs/msg/u_int8.hpp"
-#include "pb_rm_interfaces/msg/game_status.hpp"
+
 namespace decision_simple
 {
 
@@ -17,20 +17,21 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
 {
   // ===== params =====
   frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
-  base_frame_id_ = this->declare_parameter<std::string>("base_frame_id", "base_footprint");      
+  base_frame_id_ = this->declare_parameter<std::string>("base_frame_id", "base_footprint");
 
+  game_status_topic_ = this->declare_parameter<std::string>("referee_game_status_topic", "referee/game_status");
   robot_status_topic_ = this->declare_parameter<std::string>("referee_robot_status_topic", "referee/robot_status");
   goal_pose_topic_    = this->declare_parameter<std::string>("goal_pose_topic", "goal_pose");
 
   chassis_mode_topic_ = this->declare_parameter<std::string>("chassis_mode_topic", "chassis_mode");
   debug_attack_pose_topic_ = this->declare_parameter<std::string>("debug_attack_pose_topic", "debug_attack_pose");
-  game_status_topic_ = this->declare_parameter<std::string>("referee_game_status_topic", "referee/game_status");
+
   require_game_running_ =this->declare_parameter<bool>("require_game_running", true);
   start_delay_sec_ =this->declare_parameter<double>("start_delay_sec", 5.0);
   default_spin_keep_xy_tol_ =this->declare_parameter<double>("default_spin_keep_xy_tol", 0.80);
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   detector_armors_topic_ = this->declare_parameter<std::string>("detector_armors_topic", "detector/armors");
-  tracker_target_topic_  = this->declare_parameter<std::string>("tracker_target_topic",  "tracker/target");
+  tracker_target_topic_  = this->declare_parameter<std::string>("tracker_target_topic",  "/serial/EnemyPos");
 #endif
 
   supply_x_   = this->declare_parameter<double>("supply_x", 0.0);
@@ -50,7 +51,6 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
 
   combat_max_distance_ = this->declare_parameter<double>("combat_max_distance", 8.0);
   attack_hold_sec_     = this->declare_parameter<double>("combat_cooldown_sec", 1.0);
-
   attacked_hold_sec_   = this->declare_parameter<double>("attacked_hold_sec", 1.5);          
 
   tick_hz_         = this->declare_parameter<double>("tick_hz", 20.0);
@@ -85,10 +85,8 @@ DecisionSimple::DecisionSimple(const rclcpp::NodeOptions & options)
     std::bind(&DecisionSimple::onTarget, this, std::placeholders::_1));
 #endif
 
-  // init
-  setState(State::DEFAULT);
-
-  setChassisMode(chassisFollowed);
+  // init state & chassis_mode
+  setState(State::DEFAULT); setChassisMode(chassisFollowed);
 
   // timer
   const double hz = std::max(1e-6, tick_hz_);
@@ -107,10 +105,10 @@ void DecisionSimple::onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::Sha
   last_robot_status_ = *msg;
   has_robot_status_ = true;
 }
+
 void DecisionSimple::onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg)
 {
   std::lock_guard<std::mutex> lk(mtx_);
-
   const uint8_t prev = last_game_status_;
   last_game_status_ = msg->game_progress;
   has_game_status_ = true;
@@ -147,21 +145,18 @@ void DecisionSimple::onTarget(const auto_aim_interfaces::msg::Target::SharedPtr 
   last_target_opt_ = *msg;
 }
 #endif
-// ================= tick：决策 + 底盘模式切换 =================
+// ================= tick：决策 =================
 void DecisionSimple::tick()
 {
   // snapshot
   pb_rm_interfaces::msg::RobotStatus rs;
-  bool has_rs = false;
-  bool has_gs = false;
-  bool match_started = false;
+  bool has_rs = false; bool has_gs = false; bool match_started = false;
   rclcpp::Time match_start_time;
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   auto_aim_interfaces::msg::Armors armors;
   bool has_armors = false;
   std::optional<auto_aim_interfaces::msg::Target> target_opt;
 #endif
-
   {
     std::lock_guard<std::mutex> lk(mtx_);
     has_rs = has_robot_status_;
@@ -218,7 +213,6 @@ void DecisionSimple::tick()
   const bool in_center_keep_spin = isNear(default_x_, default_y_, default_spin_keep_xy_tol_); // 确认是否在大圈
   const bool at_supply = isNear(supply_x_, supply_y_, supply_arrive_xy_tol_);
 
-  // ================= 1) 补给保持 =================
   if (state_ == State::SUPPLY) {
     if (!isStatusRecovered(rs)) {
       default_spin_latched_ = false;   
@@ -229,10 +223,8 @@ void DecisionSimple::tick()
       publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
       return;
     }
-    
   }
 
-  // ================= 2) 状态差 -> 进补给 =================
   if (isStatusBad(rs)) {
     setState(State::SUPPLY);
     default_spin_latched_ = false; 
@@ -288,10 +280,13 @@ void DecisionSimple::tick()
   if (!in_center_keep_spin) {
     default_spin_latched_ = false;
   }
-  if (attacked_recent){setChassisMode(littleTES);             
+
+  if (attacked_recent) {
+    setChassisMode(littleTES);
   } else {
     setChassisMode(default_spin_latched_ ? littleTES : chassisFollowed);
-  }   
+  }
+
   const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_, default_yaw_);
   publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
 }
@@ -410,24 +405,15 @@ void DecisionSimple::setState(State s)
 {
   if (state_ == s) return;
   state_ = s;
-
-  //不再用 state_ 去发布 chassis_mode
   RCLCPP_INFO(this->get_logger(), "State -> %u", static_cast<unsigned>(state_));
 }
 
-// 
-void DecisionSimple::publishChassisMode(chassisMode mode)
-{
-  std_msgs::msg::UInt8 m;
-  m.data = mode;
-  chassis_mode_pub_->publish(m);
-}
-
-// 只在发生变化时发一次，避免刷屏
 void DecisionSimple::setChassisMode(chassisMode mode)
 {
   current_chassis_mode_ = mode;
-  publishChassisMode(mode);
+  std_msgs::msg::UInt8 m;
+  m.data = mode;
+  chassis_mode_pub_->publish(m);
 }
 
 void DecisionSimple::publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz)
@@ -440,9 +426,8 @@ void DecisionSimple::publishGoalThrottled(const geometry_msgs::msg::PoseStamped 
     goal_pose_pub_->publish(goal);
   }
 }
-}
 
-// namespace decision_simple
+} // namespace decision_simple
 
 #include <rclcpp_components/register_node_macro.hpp>
 RCLCPP_COMPONENTS_REGISTER_NODE(decision_simple::DecisionSimple)

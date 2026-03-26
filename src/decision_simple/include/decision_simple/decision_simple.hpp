@@ -4,19 +4,17 @@
 #include <optional>
 #include <string>
 
-#include "rcl/time.h"
-#include "rclcpp/rclcpp.hpp"
-
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/transform_stamped.hpp"          
+#include "macros_autoaim.hpp" 
 #include "pb_rm_interfaces/msg/game_status.hpp"
 #include "pb_rm_interfaces/msg/robot_status.hpp"
+
+#include "rcl/time.h"
+#include "rclcpp/rclcpp.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"          
 #include "std_msgs/msg/u_int8.hpp"
 #include "tf2_ros/buffer.h"                                 
 #include "tf2_ros/transform_listener.h"
-
-
-// #define DECISION_SIMPLE_HAS_AUTO_AIM
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
 #include "auto_aim_interfaces/msg/armors.hpp"
@@ -73,8 +71,7 @@ private:
   bool isNear(double gx, double gy, double tol_xy) ;             
 
   void setState(State s);
-
-  void publishChassisMode(chassisMode mode);                            
+                            
   void setChassisMode(chassisMode mode);                                
 
   void publishGoalThrottled(const geometry_msgs::msg::PoseStamped & goal, rclcpp::Time & last_pub, double hz);
@@ -94,7 +91,7 @@ private:
 
 #ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   std::string detector_armors_topic_{"detector/armors"};
-  std::string tracker_target_topic_{"tracker/target"};
+  std::string tracker_target_topic_{"/serial/EnemyPos"};
 #endif
 
   double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
