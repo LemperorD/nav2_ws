@@ -33,6 +33,7 @@ add_library(decision_simple_component SHARED
 ament_target_dependencies(decision_simple_component
   rclcpp
   rclcpp_components
+  rclcpp_action
   std_msgs
   geometry_msgs
   nav_msgs
