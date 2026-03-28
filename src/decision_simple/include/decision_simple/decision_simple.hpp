@@ -52,7 +52,7 @@ private:
   void pubGoal();
 
 private: // utils
-  inline bool isNear(double tol_radius);
+  inline bool isNear();
   inline bool isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs);
 
 private: // params

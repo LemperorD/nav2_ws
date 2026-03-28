@@ -50,6 +50,7 @@ DecisionSimpleNode::DecisionSimpleNode(const rclcpp::NodeOptions & options)
 }
 
 DecisionSimpleNode::~DecisionSimpleNode() {
+
   timer_-> reset();
   std::cout << "\033[32mDecision-Simple Node destroyed!\033[0m" << std::endl;
 }
@@ -137,18 +138,19 @@ void DecisionSimpleNode::tick()
   }
 
   uint8_t current_state = isNeedHeal_ ? heal : attack;
-  setState(current_state); setChassisMode(); pubGoal();
+  setState(current_state); setChassisMode();
 }
 
 void DecisionSimpleNode::setState(uint8_t s) {
   if (state_ == s) return;
   state_ = s;
   std::cout << "\033[32mCurrent State:" << state_ << "\033[0m" << std::endl;
+  pubGoal();
 }
 
 void DecisionSimpleNode::setChassisMode() {
   uint8_t mode;
-  if (isNear(tol_radius_)) mode = littleTES;
+  if (isNear()) mode = littleTES;
   else mode = chassisFollowed;
 
   if (chassis_mode_ == mode) return;
@@ -185,10 +187,13 @@ void DecisionSimpleNode::pubGoal()
   current_goal_.pose.pose.orientation.w = 1.0;
 
   nav_action_client_->async_send_goal(current_goal_, send_goal_options_);
+  std::cout << "\033[32mNew Goal Publish: " 
+            << "x: " << current_goal_.pose.pose.position.x << ", "
+            << "y: " << current_goal_.pose.pose.position.y << std::endl;
   tol_radius_ = tol_radius_min_;
 }
 
-inline bool DecisionSimpleNode::isNear(double tol_radius) {
+inline bool DecisionSimpleNode::isNear() {
   double current_x, current_y;
   try {
     const auto tf = tf_buffer_->lookupTransform(map_frame_id_, base_frame_id_, tf2::TimePointZero);
@@ -201,7 +206,7 @@ inline bool DecisionSimpleNode::isNear(double tol_radius) {
 
   const double dx = current_x - current_goal_.pose.pose.position.x;
   const double dy = current_y - current_goal_.pose.pose.position.y;
-  return std::hypot(dx, dy) <= tol_radius;
+  return std::hypot(dx, dy) <= tol_radius_;
 }
 
 inline bool DecisionSimpleNode::isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs) {
