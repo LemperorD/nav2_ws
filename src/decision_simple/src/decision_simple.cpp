@@ -50,7 +50,6 @@ DecisionSimpleNode::DecisionSimpleNode(const rclcpp::NodeOptions & options)
 }
 
 DecisionSimpleNode::~DecisionSimpleNode() {
-
   timer_-> reset();
   std::cout << "\033[32mDecision-Simple Node destroyed!\033[0m" << std::endl;
 }
@@ -58,12 +57,11 @@ DecisionSimpleNode::~DecisionSimpleNode() {
 void DecisionSimpleNode::onConfigure() {
   require_game_running_ =this->declare_parameter<bool>("require_game_running", true); // for debug
 
-  map_frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
+  map_frame_id_ = this->declare_parameter<std::string>("map_frame_id", "map");
   base_frame_id_ = this->declare_parameter<std::string>("base_frame_id", "base_footprint");
 
   game_status_topic_ = this->declare_parameter<std::string>("referee_game_status_topic", "referee/game_status");
   robot_status_topic_ = this->declare_parameter<std::string>("referee_robot_status_topic", "referee/robot_status");
-  goal_pose_topic_    = this->declare_parameter<std::string>("goal_pose_topic", "goal_pose");
   chassis_mode_topic_ = this->declare_parameter<std::string>("chassis_mode_topic", "chassis_mode");
 
   start_delay_sec_ =this->declare_parameter<double>("start_delay_sec", 5.0);
@@ -75,14 +73,11 @@ void DecisionSimpleNode::onConfigure() {
   default_x_   = this->declare_parameter<double>("default_x", 4.65);
   default_y_   = this->declare_parameter<double>("default_y", -3.5);
 
-  tol_radius_ = this->declare_parameter<double>("tol_radius", 0.30);
+  tol_radius_min_ = this->declare_parameter<double>("tol_radius_min", 0.30);
+  tol_radius_max_ = this->declare_parameter<double>("tol_radius_max", 0.80);
 
-  hp_enter_supply_ = this->declare_parameter<int>("hp_survival_enter", 120);
-  hp_exit_supply_  = this->declare_parameter<int>("hp_survival_exit", 300);
-
-  combat_max_distance_ = this->declare_parameter<double>("combat_max_distance", 8.0);
-  attack_hold_sec_     = this->declare_parameter<double>("combat_cooldown_sec", 1.0);
-  attacked_hold_sec_   = this->declare_parameter<double>("attacked_hold_sec", 1.5);          
+  hp_attack_ = this->declare_parameter<int>("hp_attack", 300);
+  hp_heal_  = this->declare_parameter<int>("hp_heal", 120);       
 
   tick_hz_ = this->declare_parameter<double>("tick_hz", 20.0);
   goal_hz_ = this->declare_parameter<double>("goal_hz", 2.0);
@@ -109,7 +104,8 @@ void DecisionSimpleNode::onConfigure() {
 
 void DecisionSimpleNode::onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg) {
   last_robot_status_ = *msg;
-  isNeedHeal_ = isStatusBad(last_robot_status_);
+  if(state_ == attack) isNeedHeal_ = isStatusBad(last_robot_status_);
+  if(state_ == heal) isNeedHeal_ = isStatusRecovered(last_robot_status_);
 }
 
 void DecisionSimpleNode::onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg)
@@ -142,7 +138,10 @@ void DecisionSimpleNode::tick()
 }
 
 void DecisionSimpleNode::setState(uint8_t s) {
-  if (state_ == s) return;
+  if (state_ == s) {
+    if (isNear(tol_radius_max_)) pubGoal();
+    return;
+  }
   state_ = s;
   std::cout << "\033[32mCurrent State:" << state_ << "\033[0m" << std::endl;
   pubGoal();
@@ -153,9 +152,10 @@ void DecisionSimpleNode::setChassisMode() {
   if (isNear()) mode = littleTES;
   else mode = chassisFollowed;
 
-  if (chassis_mode_ == mode) return;
-  chassis_mode_ = mode;
-  std::cout << "\033[32mCurrent Chassis Mode:" << chassis_mode_ << "\033[0m" << std::endl;
+  if (chassis_mode_ != mode) {
+    chassis_mode_ = mode;
+    std::cout << "\033[32mCurrent Chassis Mode:" << chassis_mode_ << "\033[0m" << std::endl;
+  }
   std_msgs::msg::UInt8 m;
   m.data = chassis_mode_;
   chassis_mode_pub_->publish(m);
@@ -200,7 +200,7 @@ inline bool DecisionSimpleNode::isNear() {
     current_x = tf.transform.translation.x;
     current_y = tf.transform.translation.y;
   } catch (const tf2::TransformException & ex) {
-    std::cout << "" << std::endl;
+    std::cout << "\033[33mNo TF!\033[0m" << std::endl;
     return false;
   }
 
@@ -209,9 +209,30 @@ inline bool DecisionSimpleNode::isNear() {
   return std::hypot(dx, dy) <= tol_radius_;
 }
 
+inline bool DecisionSimpleNode::isNear(double tol_radius) {
+  double current_x, current_y;
+  try {
+    const auto tf = tf_buffer_->lookupTransform(map_frame_id_, base_frame_id_, tf2::TimePointZero);
+    current_x = tf.transform.translation.x;
+    current_y = tf.transform.translation.y;
+  } catch (const tf2::TransformException & ex) {
+    std::cout << "\033[33mNo TF!\033[0m" << std::endl;
+    return false;
+  }
+
+  const double dx = current_x - current_goal_.pose.pose.position.x;
+  const double dy = current_y - current_goal_.pose.pose.position.y;
+  return std::hypot(dx, dy) <= tol_radius;
+}
+
 inline bool DecisionSimpleNode::isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs) {
   const int hp = static_cast<int>(rs.current_hp);
-  return hp < hp_enter_supply_;
+  return hp < hp_heal_;
+}
+
+inline bool DecisionSimpleNode::isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus & rs) {
+  const int hp = static_cast<int>(rs.current_hp);
+  return hp > hp_attack_;
 }
 
 } // namespace decision_simple

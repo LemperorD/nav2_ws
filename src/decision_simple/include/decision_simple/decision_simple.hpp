@@ -52,37 +52,29 @@ private:
   void pubGoal();
 
 private: // utils
-  inline bool isNear();
+  inline bool isNear(); inline bool isNear(double tol_radius);
   inline bool isStatusBad(const pb_rm_interfaces::msg::RobotStatus & rs);
+  inline bool isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus & rs);
 
 private: // params
   std::string map_frame_id_{"map"};
   std::string base_frame_id_{"base_link"};                              
   std::string robot_status_topic_{"referee/robot_status"};
   std::string game_status_topic_{"referee/game_status"};
-  std::string goal_pose_topic_{"goal_pose"};
   std::string chassis_mode_topic_{"chassis_mode"};
 
   double supply_x_{0.0}, supply_y_{0.0};
   double default_x_{4.65}, default_y_{-3.5};
   
   double tol_radius_{0.30};
-  double tol_radius_min_{0.30};
-  double tol_radius_max_{0.80};
+  double tol_radius_min_{0.30}; // 是否判定为进入目标点的容许半径
+  double tol_radius_max_{0.80}; // 是否保持小脱落的容许半径
 
-  int hp_enter_supply_{120};
-  int hp_exit_supply_{300};
-
-  double combat_max_distance_{8.0};
-  double attack_hold_sec_{1.0};
-
-  double attacked_hold_sec_{1.5};
+  int hp_heal_{120};
+  int hp_attack_{300};
 
   double tick_hz_{20.0};
   double goal_hz_{10.0};
-  //小陀螺保持半径
-  double default_spin_keep_xy_tol_{0.80};
-  bool default_spin_latched_{false};
 
 private: // rclcpp
   // pubs

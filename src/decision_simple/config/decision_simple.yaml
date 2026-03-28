@@ -8,7 +8,6 @@
     referee_rfid_status_topic:  "referee/rfid_status"
     
     # nav2 goal_pose
-    goal_pose_topic: "goal_pose"
     map_frame_id: "map"
     base_frame_id: "map"
 
@@ -22,15 +21,10 @@
     default_x: 1.0   #4.65
     default_y: -1.0  #-3.5
 
-    # thresholds（来自 XML）
-    hp_survival_enter: 120
-    hp_survival_exit: 300
-    heat_supply_done: 100
-    hp_supply_done: 399
-    default_arrive_xy_tol: 0.30
-    default_spin_keep_xy_tol: 0.80
-    combat_max_distance: 8.0
-    combat_cooldown_sec: 3.0
+    hp_heal: 120
+    hp_attack: 300
+    tol_radius_min: 0.30 # 是否认为其接近目标点并切换为小陀螺模式的容许半径
+    tol_radius_max: 0.80 # 是否维持小陀螺的容许半径
 
     goal_hz: 10.0
     tick_hz: 20.0
