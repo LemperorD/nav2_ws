@@ -94,6 +94,7 @@ void DecisionSimpleNode::onConfigure() {
     [this](const GoalHandleNav2::WrappedResult & result)
     {
       if (result.code == rclcpp_action::ResultCode::SUCCEEDED) {
+        at_goal_ = true;
         tol_radius_ = tol_radius_max_;
         std::cout << "\033[32mGoal succeeded!\033[0m" << std::endl;
       } else {
@@ -149,7 +150,7 @@ void DecisionSimpleNode::setState(uint8_t s) {
 
 void DecisionSimpleNode::setChassisMode() {
   uint8_t mode;
-  if (isNear()) mode = littleTES;
+  if (isNear() && at_goal_) mode = littleTES;
   else mode = chassisFollowed;
 
   if (chassis_mode_ != mode) {
@@ -190,7 +191,7 @@ void DecisionSimpleNode::pubGoal()
   std::cout << "\033[32mNew Goal Publish: " 
             << "x: " << current_goal_.pose.pose.position.x << ", "
             << "y: " << current_goal_.pose.pose.position.y << std::endl;
-  tol_radius_ = tol_radius_min_;
+  tol_radius_ = tol_radius_min_; at_goal_ = false;
 }
 
 inline bool DecisionSimpleNode::isNear() {

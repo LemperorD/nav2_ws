@@ -69,6 +69,7 @@ private: // params
   double tol_radius_{0.30};
   double tol_radius_min_{0.30}; // 是否判定为进入目标点的容许半径
   double tol_radius_max_{0.80}; // 是否保持小脱落的容许半径
+  bool at_goal_{false}; // 极其唐氏的判断逻辑，验证小陀螺导航后立刻删除
 
   int hp_heal_{120};
   int hp_attack_{300};
