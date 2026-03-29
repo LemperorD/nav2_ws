@@ -8,9 +8,6 @@ ros2 bag record /Laser_map \
     /cloud_effected \
     /cloud_registered \
     /cloud_registered_body \
-    /cmd_gimbal_joint \
-    /cmd_shoot \
-    /cmd_spin \
     /cmd_vel \
     /cmd_vel_nav2_result \
     /diagnostics \
@@ -21,7 +18,6 @@ ros2 bag record /Laser_map \
     /lidar_odometry \
     /livox/imu \
     /livox/lidar \
-    /livox/lidar/pointcloud \
     /local_plan \
     /map \
     /map_clearing \
@@ -43,4 +39,7 @@ ros2 bag record /Laser_map \
     /terrain_map \
     /terrain_map_ext \
     /tf \
-    /tf_static
+    /tf_static \
+    /referee/game_status \
+    /referee/robot_status \
+    /referee/rfid_status \
