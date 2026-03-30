@@ -409,6 +409,9 @@ void SerialCommunicationClass::tryReconnect()
   referee_frame_ready_.store(false);
 
   if (!serial_port_.empty()) {
+    std::cout << termcolor::green
+          << "successfully reconnected to " << serial_port_ << " at " << baud_rate_ << " baud..."
+          << termcolor::reset << std::endl;
     openSerialPort(serial_port_, baud_rate_);
   } else {
     std::cout << termcolor::yellow
