@@ -1,5 +1,5 @@
 #include "communication/Com.h"
-#include "communication/termcolor.hpp"
+#include "misc/termcolor.hpp"
 
 #include <algorithm>
 #include <cerrno>

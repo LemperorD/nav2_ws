@@ -1,5 +1,5 @@
 #include "communication/bridge.hpp"
-#include "communication/termcolor.hpp"
+#include "misc/termcolor.hpp"
 
 #include <algorithm>
 #include <cstring>
