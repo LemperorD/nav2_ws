@@ -140,7 +140,7 @@ void DecisionSimpleNode::tick()
 
 void DecisionSimpleNode::setState(uint8_t s) {
   if (state_ == s) {
-    if (isNear(tol_radius_max_)) pubGoal();
+    if (!isNear(tol_radius_max_)) pubGoal();
     return;
   }
   state_ = s;
