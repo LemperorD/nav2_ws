@@ -1,5 +1,7 @@
 #include "communication/bridge.hpp"
+
 #include "misc/termcolor.hpp"
+#include "misc/pangolin_visualizer.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -14,24 +16,25 @@ BridgeNode::BridgeNode(const rclcpp::NodeOptions & options)
   port_name_("/dev/ttyACM0"),
   baud_rate_(115200)
 {
+  // Configure parameters
   this->declare_parameter<std::string>("port_name", "/dev/ttyACM0");
   this->declare_parameter<int>("baud_rate", 115200);
   this->declare_parameter<double>("Yaw_bias", 0.0);
   this->declare_parameter<int>("max_dwa_size", 15);
   this->declare_parameter<double>("vel_trans_scale", 40.0);
-
   this->get_parameter("port_name", port_name_);
   this->get_parameter("baud_rate", baud_rate_);
   this->get_parameter("Yaw_bias", Yaw_bias_);
   this->get_parameter("max_dwa_size", max_dwa_size_);
   this->get_parameter("vel_trans_scale", vel_trans_scale_);
 
+  // init serial communication
   com_ = std::make_shared<SerialCommunicationClass>(this, port_name_, baud_rate_);
-
+  // init TF
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(this);
-
+  // 检测雷达是否连接，防止大量弹出无用注释
   lidar_connected_ = isLidarConnected();
   std::cout << "Lidar connected: " << std::boolalpha << lidar_connected_ << std::endl;
   

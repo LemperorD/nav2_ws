@@ -108,11 +108,11 @@ private: // dwa滤波器
   int max_dwa_size_ = 15;
   std::deque<double> dwa_;
   double dwa_filter(double sample);
-  geometry_msgs::msg::Twist transformVelocityToChassis(const geometry_msgs::msg::Twist & twist_in, double yaw_diff);
 
-private:
+private: // 坐标系相关
   void publishTransformGimbalVision();
   void publishTransformGimbalYaw(double yaw);
+  geometry_msgs::msg::Twist transformVelocityToChassis(const geometry_msgs::msg::Twist & twist_in, double yaw_diff);
 
 private:
   std::string port_name_ = "/dev/ttyACM0";
@@ -122,6 +122,7 @@ private:
   double yaw_diff_ = 0.0;
   double angle_init_ = 0.0;
 
+  // 串口通信类实例
   std::shared_ptr<SerialCommunicationClass> com_;
 
   // 模板类桥接器
@@ -140,11 +141,11 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   // 多输入/输出的额外sub/pub可在此添加
-  // Additional sub/pub for multi-input/output can be added here
+  // Additional sub/pub for multi-input/output
   rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr chassis_mode_sub_;
 
   // 多输入/输出所使用的成员变量可在此添加
-  // Member variables used for multi-input/output can be added here
+  // Member variables used for multi-input/output
   uint8_t chassis_mode_ = chassisFollowed;
 
   // 判断是否有雷达连接
@@ -156,6 +157,12 @@ private: // 裁判系统相关
   rclcpp::Publisher<pb_rm_interfaces::msg::RfidStatus>::SharedPtr rfid_status_pub_;
   void publishRefereeData();
   pb_rm_interfaces::msg::RfidStatus rfid2ros(uint32_t rfid);
+
+private: // 可视化相关
+  std::shared_ptr<PangolinVisualizer> visualizer_;
+
+  // 需要可视化的通信变量写为全局变量并写好可视化函数
+  // Global variables for visualization and corresponding visualization functions
 };
 
 }  // namespace bridge

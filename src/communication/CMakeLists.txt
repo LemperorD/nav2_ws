@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
+find_package(Eigen3 REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -25,7 +26,7 @@ target_include_directories(communication PUBLIC
 ament_target_dependencies(communication rclcpp)
 
 add_library(bridge_node SHARED src/bridge.cpp)
-target_link_libraries(bridge_node communication)
+target_link_libraries(bridge_node communication Eigen3::Eigen)
 ament_target_dependencies(bridge_node
   rclcpp
   rclcpp_components
@@ -48,11 +49,18 @@ install(TARGETS cmd_vel_test_node DESTINATION lib/${PROJECT_NAME})
 install(TARGETS communication bridge_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION lib/${PROJECT_NAME})
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
 install(
   DIRECTORY include/
-  DESTINATION include/${PROJECT_NAME})
+  DESTINATION include/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY include/misc
+  DESTINATION include/misc
+)
 
 install(
   DIRECTORY config launch
