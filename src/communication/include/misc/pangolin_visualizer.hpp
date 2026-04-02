@@ -1,6 +1,7 @@
 #ifndef PANGOLIN_VISUALIZER_HPP
 #define PANGOLIN_VISUALIZER_HPP
 
+#include <GL/glew.h>
 #include <pangolin/pangolin.h>
 
 #include <Eigen/Core>
@@ -27,14 +28,6 @@ public:
     delete handler;
   }
 
-  void SetPose(const Eigen::Matrix4f& T) {
-    T_wb = T;
-  }
-
-  void SetVelocity(const Eigen::Vector3f& v) {
-    velocity = v;
-  }
-
 private:
   void DrawAxis(const std::string& name, float scale = 1.0f) {
     glLineWidth(3);
@@ -49,31 +42,14 @@ private:
     glEnd();
 
     glColor3f(1.0, 1.0, 1.0);
-    pangolin::GlFont::I().Text(name).Draw(scale * 0.1f, scale * 0.1f, scale * 0.1f);
-  }
-
-  void DrawVelocity() {
-    glPushMatrix();
-    glMultMatrixf(T_wb.data());
-
-    glLineWidth(5);
-    glColor3f(1,1,0);
-
-    glBegin(GL_LINES);
-    glVertex3f(0,0,0);
-    glVertex3f(velocity[0], velocity[1], velocity[2]);
-    glEnd();
-
-    glPopMatrix();
+    pangolin::GlText text = pangolin::GlFont("SansSerif", 20).Text("%s", name.c_str());
+    text.Draw(scale * 0.1f, scale * 0.1f, scale * 0.1f);
   }
 
 private:
   pangolin::OpenGlRenderState s_cam;
   pangolin::Handler3D* handler;
   pangolin::View* d_cam;
-
-  Eigen::Matrix4f T_wb = Eigen::Matrix4f::Identity();
-  Eigen::Vector3f velocity = Eigen::Vector3f::Zero();
 };
 
 #endif // PANGOLIN_VISUALIZER_HPP

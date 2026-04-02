@@ -158,11 +158,11 @@ private: // 裁判系统相关
   void publishRefereeData();
   pb_rm_interfaces::msg::RfidStatus rfid2ros(uint32_t rfid);
 
-private: // 可视化相关
-  std::shared_ptr<PangolinVisualizer> visualizer_;
+// private: // 可视化相关
+//   std::shared_ptr<PangolinVisualizer> visualizer_;
 
-  // 需要可视化的通信变量写为全局变量并写好可视化函数
-  // Global variables for visualization and corresponding visualization functions
+//   // 需要可视化的通信变量写为全局变量并写好可视化函数
+//   // Global variables for visualization and corresponding visualization functions
 };
 
 }  // namespace bridge
