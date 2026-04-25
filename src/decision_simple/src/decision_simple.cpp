@@ -56,6 +56,8 @@ namespace decision_simple {
 
   DecisionSimple::DecisionSimple(const rclcpp::NodeOptions& options)
       : Node("decision_simple", options) {
+    environment_ = std::make_unique<EnvironmentContext>();
+
     // ===== params =====
     frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
     base_frame_id_ = this->declare_parameter<std::string>("base_frame_id",

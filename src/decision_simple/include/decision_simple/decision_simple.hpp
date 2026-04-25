@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 
+#include "EnvironmentContext.hpp"
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -23,14 +24,6 @@ namespace decision_simple {
     explicit DecisionSimple(const rclcpp::NodeOptions& options);
 
   private:
-    typedef enum {
-      chassisFollowed = 1,
-      littleTES,
-      goHome,
-    } chassisMode;
-
-    enum class State : uint8_t { DEFAULT = 1, ATTACK = 2, SUPPLY = 3 };
-
     // callbacks
     void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
 
@@ -156,6 +149,8 @@ namespace decision_simple {
     // 最近一次被打时间（RobotStatus.is_hp_deduced）
     rclcpp::Time last_attacked_{0, 0, RCL_ROS_TIME};
     rclcpp::Time match_start_time_{0, 0, RCL_ROS_TIME};
+
+    std::unique_ptr<EnvironmentContext> environment_;
   };
 
 }  // namespace decision_simple
