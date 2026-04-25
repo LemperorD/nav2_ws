@@ -65,4 +65,25 @@ install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_general test/general.cpp)
+  if(TARGET test_general)
+    target_link_libraries(test_general decision_simple_component)
+    ament_target_dependencies(test_general
+      rclcpp
+      std_msgs
+      geometry_msgs
+      nav_msgs
+      tf2
+      tf2_geometry_msgs
+      nav2_msgs
+      pb_rm_interfaces
+    )
+    if(auto_aim_interfaces_FOUND)
+      ament_target_dependencies(test_general auto_aim_interfaces)
+    endif()
+  endif()
+endif()
+
 ament_package()
