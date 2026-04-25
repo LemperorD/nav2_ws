@@ -35,8 +35,11 @@ namespace decision_simple {
       CreateSystem(CreateSystemInput{});
     }
 
-    ~DecisionSimpleTest() override {
-      DestroySystem();
+    ~DecisionSimpleTest() override = default;
+
+    void TearDown() override {
+      ASSERT_NO_THROW(DestroySystem())
+          << "TearDown 失败：释放测试系统资源时抛出异常。";
     }
 
     void CreateSystem(const CreateSystemInput& config) {

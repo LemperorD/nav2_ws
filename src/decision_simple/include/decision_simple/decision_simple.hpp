@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 
+#include "auto_aim_interfaces/msg/armors.hpp"
+#include "auto_aim_interfaces/msg/target.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "pb_rm_interfaces/msg/game_status.hpp"
@@ -13,13 +15,6 @@
 #include "std_msgs/msg/u_int8.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
-
-// #define DECISION_SIMPLE_HAS_AUTO_AIM
-
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
-#include "auto_aim_interfaces/msg/armors.hpp"
-#include "auto_aim_interfaces/msg/target.hpp"
-#endif
 
 namespace decision_simple {
 
@@ -39,10 +34,8 @@ namespace decision_simple {
     // callbacks
     void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
     void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
-#endif
 
     // tick
     void tick();
@@ -55,7 +48,6 @@ namespace decision_simple {
                                                    double x, double y,
                                                    double yaw) const;
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     bool detectEnemy(const auto_aim_interfaces::msg::Armors& armors,
                      const std::optional<auto_aim_interfaces::msg::Target>&
                          target_opt) const;
@@ -64,7 +56,6 @@ namespace decision_simple {
                          const auto_aim_interfaces::msg::Armors& armors,
                          const std::optional<auto_aim_interfaces::msg::Target>&
                              target_opt) const;
-#endif
 
     // ====== chassis mode & arrival / attacked helpers ======
     bool getRobotPoseMap(double& x, double& y, double& yaw);
@@ -91,10 +82,8 @@ namespace decision_simple {
     std::string debug_attack_pose_topic_{"debug_attack_pose"};
     std::string game_status_topic_{"referee/game_status"};
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     std::string detector_armors_topic_{"detector/armors"};
     std::string tracker_target_topic_{"tracker/target"};
-#endif
 
     double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
     double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};
@@ -129,12 +118,10 @@ namespace decision_simple {
         robot_status_sub_;
     rclcpp::Subscription<pb_rm_interfaces::msg::GameStatus>::SharedPtr
         game_status_sub_;
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     rclcpp::Subscription<auto_aim_interfaces::msg::Armors>::SharedPtr
         armors_sub_;
     rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr
         target_sub_;
-#endif
 
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -147,11 +134,9 @@ namespace decision_simple {
     bool has_robot_status_{false};
     bool require_game_running_{false};  // 是否必须等比赛开始再运行
     double start_delay_sec_{5.0};       // 比赛开始后的等待秒数
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     auto_aim_interfaces::msg::Armors last_armors_{};
     bool has_armors_{false};
     std::optional<auto_aim_interfaces::msg::Target> last_target_opt_;
-#endif
 
     State state_{State::DEFAULT};
 

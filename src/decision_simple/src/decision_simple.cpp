@@ -38,7 +38,7 @@
 //    -DecisionSimpleNode
 //    -EnvironmentContext
 //    -BehaviorController
-// 1) Remove detector/armors, we don't use these.
+// 1) Remove armors, we don't use this.
 // 2) Remove chassis_mode, publish corresponding velocity instead.
 
 #include "decision_simple/decision_simple.hpp"
@@ -77,12 +77,10 @@ namespace decision_simple {
     start_delay_sec_ = this->declare_parameter<double>("start_delay_sec", 5.0);
     default_spin_keep_xy_tol_ = this->declare_parameter<double>(
         "default_spin_keep_xy_tol", 0.80);
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     detector_armors_topic_ = this->declare_parameter<std::string>(
         "detector_armors_topic", "detector/armors");
     tracker_target_topic_ = this->declare_parameter<std::string>(
         "tracker_target_topic", "tracker/target");
-#endif
 
     supply_x_ = this->declare_parameter<double>("supply_x", 0.0);
     supply_y_ = this->declare_parameter<double>("supply_y", 0.0);
@@ -138,7 +136,6 @@ namespace decision_simple {
             game_status_topic_, rclcpp::QoS(10),
             std::bind(&DecisionSimple::onGameStatus, this,
                       std::placeholders::_1));
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     armors_sub_ = this->create_subscription<auto_aim_interfaces::msg::Armors>(
         detector_armors_topic_, rclcpp::QoS(10),
         std::bind(&DecisionSimple::onArmors, this, std::placeholders::_1));
@@ -146,7 +143,6 @@ namespace decision_simple {
     target_sub_ = this->create_subscription<auto_aim_interfaces::msg::Target>(
         tracker_target_topic_, rclcpp::QoS(10),
         std::bind(&DecisionSimple::onTarget, this, std::placeholders::_1));
-#endif
 
     // init
     setState(State::DEFAULT);
@@ -201,7 +197,6 @@ namespace decision_simple {
                   "Game left running state, reset match-start gate.");
     }
   }
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   void DecisionSimple::onArmors(
       const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -214,7 +209,6 @@ namespace decision_simple {
     std::lock_guard<std::mutex> lk(mtx_);
     last_target_opt_ = *msg;
   }
-#endif
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
     // snapshot
@@ -223,24 +217,24 @@ namespace decision_simple {
     bool has_gs = false;
     bool match_started = false;
     rclcpp::Time match_start_time;
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     auto_aim_interfaces::msg::Armors armors;
     bool has_armors = false;
     std::optional<auto_aim_interfaces::msg::Target> target_opt;
-#endif
 
     {
       std::lock_guard<std::mutex> lk(mtx_);
       has_rs = has_robot_status_;
-      if (has_rs) rs = last_robot_status_;
+      if (has_rs) {
+        rs = last_robot_status_;
+      }
       has_gs = has_game_status_;
       match_started = match_started_;
       match_start_time = match_start_time_;
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
       has_armors = has_armors_;
-      if (has_armors) armors = last_armors_;
+      if (has_armors) {
+        armors = last_armors_;
+      }
       target_opt = last_target_opt_;
-#endif
     }
 
     if (!has_rs) {
@@ -311,13 +305,14 @@ namespace decision_simple {
       return;
     }
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
     // ================= 3) 状态好 -> 有敌攻击 =================
     bool enemy = false;
     if (has_armors || target_opt.has_value()) {
       enemy = detectEnemy(armors, target_opt);
     }
-    if (enemy) last_enemy_seen_ = now;
+    if (enemy) {
+      last_enemy_seen_ = now;
+    }
 
     const bool enemy_recent = (last_enemy_seen_.nanoseconds() != 0)
                            && ((now - last_enemy_seen_).seconds()
@@ -326,10 +321,11 @@ namespace decision_simple {
     if (enemy_recent) {
       setState(State::ATTACK);
       default_spin_latched_ = false;
-      if (attacked_recent)
+      if (attacked_recent) {
         setChassisMode(littleTES);
-      else
+      } else {
         setChassisMode(chassisFollowed);
+      }
 
       geometry_msgs::msg::PoseStamped attack_goal;
       if (buildAttackGoal(attack_goal, armors, target_opt)) {
@@ -347,7 +343,6 @@ namespace decision_simple {
       }
       return;
     }
-#endif
     // ================= 4) 默认：去中心点 =================
     setState(State::DEFAULT);
     // 1. 先进入 0.3m 小圈 -> 小陀螺模式
@@ -420,13 +415,14 @@ namespace decision_simple {
   bool DecisionSimple::isNear(double gx, double gy, double tol_xy) {
     double x, y, yaw;
     (void)yaw;
-    if (!getRobotPoseMap(x, y, yaw)) return false;
+    if (!getRobotPoseMap(x, y, yaw)) {
+      return false;
+    }
     const double dx = x - gx;
     const double dy = y - gy;
     return std::hypot(dx, dy) <= tol_xy;
   }
 
-#ifdef DECISION_SIMPLE_HAS_AUTO_AIM
   bool DecisionSimple::detectEnemy(
       const auto_aim_interfaces::msg::Armors& armors,
       const std::optional<auto_aim_interfaces::msg::Target>& target_opt) const {
@@ -443,7 +439,9 @@ namespace decision_simple {
       const double y = a.pose.position.y;
       const double z = a.pose.position.z;
       const double dist = std::sqrt(x * x + y * y + z * z);
-      if (dist <= combat_max_distance_) return true;
+      if (dist <= combat_max_distance_) {
+        return true;
+      }
     }
     return false;
   }
@@ -461,7 +459,9 @@ namespace decision_simple {
       return true;
     }
 
-    if (armors.armors.empty()) return false;
+    if (armors.armors.empty()) {
+      return false;
+    }
 
     const auto* best = &armors.armors.front();
     double best_dist = 1e18;
@@ -483,10 +483,11 @@ namespace decision_simple {
                          0.0);
     return true;
   }
-#endif
 
   void DecisionSimple::setState(State s) {
-    if (state_ == s) return;
+    if (state_ == s) {
+      return;
+    }
     state_ = s;
 
     // 不再用 state_ 去发布 chassis_mode
