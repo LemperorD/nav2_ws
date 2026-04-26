@@ -43,12 +43,12 @@ namespace decision_simple {
                                                    double x, double y,
                                                    double yaw) const;
 
-    bool detectEnemy(const auto_aim_interfaces::msg::Armors& armors,
+    bool detectEnemy(const Armors& armors,
                      const std::optional<auto_aim_interfaces::msg::Target>&
                          target_opt) const;
 
     bool buildAttackGoal(geometry_msgs::msg::PoseStamped& out,
-                         const auto_aim_interfaces::msg::Armors& armors,
+                         const Armors& armors,
                          const std::optional<auto_aim_interfaces::msg::Target>&
                              target_opt) const;
 
@@ -131,7 +131,7 @@ namespace decision_simple {
     RobotStatus last_robot_status_{};
     bool has_robot_status_{false};
 
-    auto_aim_interfaces::msg::Armors last_armors_{};
+    Armors last_armors_{};
     bool has_armors_{false};
     std::optional<auto_aim_interfaces::msg::Target> last_target_opt_;
 

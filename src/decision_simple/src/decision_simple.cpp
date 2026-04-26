@@ -184,7 +184,10 @@ namespace decision_simple {
   void DecisionSimple::onArmors(
       const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
-    last_armors_ = *msg;
+
+    environment_->onArmors(ConvertArmors(msg));
+
+    last_armors_ = ConvertArmors(msg);
     has_armors_ = true;
   }
 
@@ -201,7 +204,7 @@ namespace decision_simple {
     bool has_gs = false;
     bool match_started = false;
     rclcpp::Time match_start_time;
-    auto_aim_interfaces::msg::Armors armors;
+    Armors armors;
     bool has_armors = false;
     std::optional<auto_aim_interfaces::msg::Target> target_opt;
 
@@ -407,7 +410,7 @@ namespace decision_simple {
   }
 
   bool DecisionSimple::detectEnemy(
-      const auto_aim_interfaces::msg::Armors& armors,
+      const Armors& armors,
       const std::optional<auto_aim_interfaces::msg::Target>& target_opt) const {
     if (target_opt.has_value() && target_opt->tracking) {
       const double x = target_opt->position.x;
@@ -430,8 +433,7 @@ namespace decision_simple {
   }
 
   bool DecisionSimple::buildAttackGoal(
-      geometry_msgs::msg::PoseStamped& out,
-      const auto_aim_interfaces::msg::Armors& armors,
+      geometry_msgs::msg::PoseStamped& out, const Armors& armors,
       const std::optional<auto_aim_interfaces::msg::Target>& target_opt) const {
     if (target_opt.has_value() && target_opt->tracking) {
       const std::string frame = (!target_opt->header.frame_id.empty())

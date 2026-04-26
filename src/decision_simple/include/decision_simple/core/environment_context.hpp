@@ -27,10 +27,10 @@ namespace decision_simple {
     EnvironmentContext() = default;
 
     /// Update environment state from robot status
-    void onRobotStatus(const RobotStatus robot_status);
+    void onRobotStatus(const RobotStatus& robot_status);
 
     /// Update environment state from armors
-    void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
+    void onArmors(const Armors& msg);
 
     /// Update environment state from target
     void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);

@@ -16,13 +16,15 @@ namespace decision_simple {
     double w = 1.0;
   };
 
+  struct Position {
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+  };
   /// 3D pose with position and orientation
   struct Pose3D {
     /// Position coordinates
-    double pos_x = 0.0;
-    double pos_y = 0.0;
-    double pos_z = 0.0;
-
+    Position position;
     /// Orientation as quaternion
     Quaternion orientation;
   };
@@ -73,6 +75,16 @@ namespace decision_simple {
     static constexpr uint8_t GAME_OVER = 5u;      // 比赛结算中
   };
 
+  /// Header
+  struct Stamp {
+    int32_t sec;
+    uint32_t nanosec;
+  };
+  struct Header {
+    Stamp stamp;
+    std::string frame_id;
+  };
+
   /// Single armor target
   struct Armor {
     Pose3D pose;           // Armor position and orientation
@@ -81,8 +93,9 @@ namespace decision_simple {
 
   /// Collection of visible armors
   struct Armors {
-    std::string frame_id;      // Coordinate frame ID
-    std::vector<Armor> items;  // List of detected armors
+    Header header;
+
+    std::vector<Armor> armors;  // List of detected armors
   };
 
   /// Tracked target (single enemy)

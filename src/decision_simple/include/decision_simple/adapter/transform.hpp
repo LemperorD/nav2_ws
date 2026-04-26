@@ -14,6 +14,8 @@ namespace decision_simple {
   Quaternion ConvertQuaternion(const geometry_msgs::msg::Quaternion& ros_quat);
 
   /// Convert ROS Pose message to domain Pose3D
+  Position ConvertPoint(const geometry_msgs::msg::Point& ros_point);
+
   Pose3D ConvertPose(const geometry_msgs::msg::Pose& ros_pose);
 
   /// Convert ROS RobotStatus message to domain RobotStatus
@@ -28,7 +30,10 @@ namespace decision_simple {
 
   /// Convert ROS Armors message to domain Armors
   /// @throws std::invalid_argument if msg is nullptr
-  Armors ConvertArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
+  Armors ConvertArmors(
+      const auto_aim_interfaces::msg::Armors::SharedPtr& ros_armorsmsg);
+
+  Armor ConvertArmor(const auto_aim_interfaces::msg::Armor& ros_armormsg);
 
   /// Convert ROS Target message to domain Target
   /// @throws std::invalid_argument if msg is nullptr

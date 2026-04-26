@@ -2,12 +2,11 @@
 
 namespace decision_simple {
 
-  void EnvironmentContext::onRobotStatus(const RobotStatus robot_status) {
+  void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
     // TODO: Implement state aggregation from robot status
   }
 
-  void EnvironmentContext::onArmors(
-      const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
+  void EnvironmentContext::onArmors(const Armors& msg) {
     // TODO: Implement state aggregation from armors
   }
 
