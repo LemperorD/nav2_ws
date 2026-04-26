@@ -18,34 +18,13 @@
 // Priority (high -> low):
 // 1) Supply-first:
 //    - If hp below enter threshold OR ammo below threshold, enter SUPPLY.
-//    - Publish supply goal_pose, chassis_mode=chassisFollowed.
-//    - Hold SUPPLY until hp/ammo recover above exit conditions.
-// 2) Attack:
-//    - If enemy detected (or within hold window), enter ATTACK and publish
-//      attack goal_pose.
-//    - If attacked_recent=true, chassis_mode=littleTES; else chassisFollowed.
-// 3) Default:
-//    - Otherwise publish default goal_pose.
-//    - Apply center keep-spin latch logic for chassis_mode.
-//
-// Time behavior:
-// - attacked_hold_sec: keep attacked_recent after is_hp_deduced trigger.
-// - attack_hold_sec: keep ATTACK shortly after enemy is lost.
-// - goal publishing is throttled by per-state goal frequency parameters.
-//
-// TODO
-// 0) Refactor the class into three:
-//    -DecisionSimpleNode
-//    -EnvironmentContext
-//    -BehaviorController
-// 1) Remove armors, we don't use this.
-// 2) Remove chassis_mode, publish corresponding velocity instead.
 
-#include "decision_simple/decision_simple.hpp"
+#include "decision_simple/node/decision_simple.hpp"
 
 #include <algorithm>
 #include <cmath>
 
+#include "decision_simple/adapter/transform.hpp"
 #include "pb_rm_interfaces/msg/game_status.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -149,7 +128,7 @@ namespace decision_simple {
     // init
     setState(State::DEFAULT);
 
-    setChassisMode(chassisFollowed);
+    setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
     // timer
     const double hz = std::max(1e-6, tick_hz_);
@@ -286,7 +265,7 @@ namespace decision_simple {
     // ================= 1) 补给保持 =================
     if (state_ == State::SUPPLY) {
       if (!isStatusRecovered(rs)) {
-        setChassisMode(chassisFollowed);
+        setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
         const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
                                          supply_yaw_);
@@ -299,7 +278,7 @@ namespace decision_simple {
     if (isStatusBad(rs)) {
       setState(State::SUPPLY);
 
-      setChassisMode(chassisFollowed);
+      setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
       const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
                                        supply_yaw_);
@@ -324,9 +303,9 @@ namespace decision_simple {
       setState(State::ATTACK);
       default_spin_latched_ = false;
       if (attacked_recent) {
-        setChassisMode(littleTES);
+        setChassisMode(ChassisMode::LITTLE_TES);
       } else {
-        setChassisMode(chassisFollowed);
+        setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
       }
 
       geometry_msgs::msg::PoseStamped attack_goal;
@@ -356,9 +335,10 @@ namespace decision_simple {
       default_spin_latched_ = false;
     }
     if (attacked_recent) {
-      setChassisMode(littleTES);
+      setChassisMode(ChassisMode::LITTLE_TES);
     } else {
-      setChassisMode(default_spin_latched_ ? littleTES : chassisFollowed);
+      setChassisMode(default_spin_latched_ ? ChassisMode::LITTLE_TES
+                                           : ChassisMode::CHASSIS_FOLLOWED);
     }
     const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_,
                                      default_yaw_);
@@ -498,13 +478,13 @@ namespace decision_simple {
   }
 
   //
-  void DecisionSimple::publishChassisMode(chassisMode mode) {
+  void DecisionSimple::publishChassisMode(ChassisMode mode) {
     std_msgs::msg::UInt8 m;
-    m.data = mode;
+    m.data = static_cast<uint8_t>(mode);
     chassis_mode_pub_->publish(m);
   }
 
-  void DecisionSimple::setChassisMode(chassisMode mode) {
+  void DecisionSimple::setChassisMode(ChassisMode mode) {
     current_chassis_mode_ = mode;
     publishChassisMode(mode);
   }

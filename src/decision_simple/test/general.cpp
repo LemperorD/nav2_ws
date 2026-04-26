@@ -3,7 +3,7 @@
 #include <thread>
 #include <vector>
 
-#include "decision_simple/decision_simple.hpp"
+#include "decision_simple/node/decision_simple.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "gtest/gtest.h"
 #include "pb_rm_interfaces/msg/game_status.hpp"

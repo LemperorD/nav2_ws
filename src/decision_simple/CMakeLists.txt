@@ -23,6 +23,8 @@ include_directories(include)
 # ===== Component library =====
 add_library(decision_simple_component SHARED
   src/decision_simple.cpp
+  src/adapter_transform.cpp
+  src/context_environment_context.cpp
 )
 
 ament_target_dependencies(decision_simple_component
