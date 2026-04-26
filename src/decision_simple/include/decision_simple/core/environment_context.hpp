@@ -16,6 +16,7 @@
 #include "std_msgs/msg/u_int8.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
+#include "types.hpp"
 
 namespace decision_simple {
 
@@ -26,7 +27,7 @@ namespace decision_simple {
     EnvironmentContext() = default;
 
     /// Update environment state from robot status
-    void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
+    void onRobotStatus(const RobotStatus robot_status);
 
     /// Update environment state from armors
     void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);

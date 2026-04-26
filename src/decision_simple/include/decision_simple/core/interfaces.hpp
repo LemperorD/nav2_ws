@@ -1,5 +1,4 @@
-#ifndef DECISION_SIMPLE__CORE__INTERFACES_HPP_
-#define DECISION_SIMPLE__CORE__INTERFACES_HPP_
+#pragma once
 
 #include <cstdint>
 
@@ -20,5 +19,3 @@ namespace decision_simple {
   };
 
 }  // namespace decision_simple
-
-#endif  // DECISION_SIMPLE__CORE__INTERFACES_HPP_

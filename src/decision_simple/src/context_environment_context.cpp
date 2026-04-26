@@ -1,9 +1,8 @@
-#include "decision_simple/context/environment_context.hpp"
+#include "decision_simple/core/environment_context.hpp"
 
 namespace decision_simple {
 
-  void EnvironmentContext::onRobotStatus(
-      const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg) {
+  void EnvironmentContext::onRobotStatus(const RobotStatus robot_status) {
     // TODO: Implement state aggregation from robot status
   }
 

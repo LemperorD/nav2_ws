@@ -6,7 +6,7 @@
 
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
-#include "decision_simple/context/environment_context.hpp"
+#include "decision_simple/core/environment_context.hpp"
 #include "decision_simple/core/interfaces.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -36,8 +36,8 @@ namespace decision_simple {
     void tick();
 
     // helpers
-    bool isStatusBad(const pb_rm_interfaces::msg::RobotStatus& rs) const;
-    bool isStatusRecovered(const pb_rm_interfaces::msg::RobotStatus& rs) const;
+    bool isStatusBad(const RobotStatus& rs) const;
+    bool isStatusRecovered(const RobotStatus& rs) const;
 
     geometry_msgs::msg::PoseStamped makePoseXYZYaw(const std::string& frame,
                                                    double x, double y,
@@ -52,9 +52,8 @@ namespace decision_simple {
                          const std::optional<auto_aim_interfaces::msg::Target>&
                              target_opt) const;
 
-    bool buildSupplyGoal(
-        geometry_msgs::msg::PoseStamped& out,
-        const pb_rm_interfaces::msg::RobotStatus& status) const;
+    bool buildSupplyGoal(geometry_msgs::msg::PoseStamped& out,
+                         const RobotStatus& status) const;
 
     // ====== chassis mode & arrival / attacked helpers ======
     bool getRobotPoseMap(double& x, double& y, double& yaw);
@@ -129,7 +128,7 @@ namespace decision_simple {
 
     // ===== Cache/State =====
     mutable std::mutex mtx_;
-    pb_rm_interfaces::msg::RobotStatus last_robot_status_{};
+    RobotStatus last_robot_status_{};
     bool has_robot_status_{false};
 
     auto_aim_interfaces::msg::Armors last_armors_{};

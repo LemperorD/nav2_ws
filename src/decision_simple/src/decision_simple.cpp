@@ -148,7 +148,10 @@ namespace decision_simple {
   void DecisionSimple::onRobotStatus(
       const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
-    last_robot_status_ = *msg;
+
+    environment_->onRobotStatus(ConvertRobotStatus(msg));
+
+    last_robot_status_ = ConvertRobotStatus(msg);
     has_robot_status_ = true;
   }
   void DecisionSimple::onGameStatus(
@@ -193,7 +196,7 @@ namespace decision_simple {
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
     // snapshot
-    pb_rm_interfaces::msg::RobotStatus rs;
+    RobotStatus rs;
     bool has_rs = false;
     bool has_gs = false;
     bool match_started = false;
@@ -361,15 +364,13 @@ namespace decision_simple {
     return p;
   }
 
-  bool DecisionSimple::isStatusBad(
-      const pb_rm_interfaces::msg::RobotStatus& rs) const {
+  bool DecisionSimple::isStatusBad(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
     return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
   }
 
-  bool DecisionSimple::isStatusRecovered(
-      const pb_rm_interfaces::msg::RobotStatus& rs) const {
+  bool DecisionSimple::isStatusRecovered(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
     return (hp >= hp_exit_supply_) && (ammo > ammo_min_);

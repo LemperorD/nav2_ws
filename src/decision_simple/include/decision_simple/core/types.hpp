@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace decision_simple {
 
@@ -57,9 +59,49 @@ namespace decision_simple {
     static constexpr uint8_t ARMOR_COLLISION = 5u;
   };
 
+  /// Game status (match state)
+  struct GameStatus {
+    uint8_t game_progress = 0;      // 当前比赛阶段
+    int32_t stage_remain_time = 0;  // 当前阶段剩余时间，单位：秒
+
+    // Game progress constants
+    static constexpr uint8_t NOT_START = 0u;      // 未开始比赛
+    static constexpr uint8_t PREPARATION = 1u;    // 准备阶段
+    static constexpr uint8_t SELF_CHECKING = 2u;  // 十五秒裁判系统自检阶段
+    static constexpr uint8_t COUNT_DOWN = 3u;     // 五秒倒计时
+    static constexpr uint8_t RUNNING = 4u;        // 比赛中
+    static constexpr uint8_t GAME_OVER = 5u;      // 比赛结算中
+  };
+
+  /// Single armor target
+  struct Armor {
+    Pose3D pose;           // Armor position and orientation
+    uint8_t armor_id = 0;  // Armor identifier
+  };
+
+  /// Collection of visible armors
+  struct Armors {
+    std::string frame_id;      // Coordinate frame ID
+    std::vector<Armor> items;  // List of detected armors
+  };
+
+  /// Tracked target (single enemy)
+  struct Target {
+    std::string frame_id;   // Coordinate frame ID
+    Pose3D position;        // Position (x, y, z)
+    double yaw = 0.0;       // Yaw angle for orientation
+    bool tracking = false;  // Whether actively tracking
+  };
+
   // Type aliases for smart pointers
   using RobotStatusPtr = std::shared_ptr<RobotStatus>;
   using RobotStatusConstPtr = std::shared_ptr<const RobotStatus>;
+  using GameStatusPtr = std::shared_ptr<GameStatus>;
+  using GameStatusConstPtr = std::shared_ptr<const GameStatus>;
+  using ArmorsPtr = std::shared_ptr<Armors>;
+  using ArmorsConstPtr = std::shared_ptr<const Armors>;
+  using TargetPtr = std::shared_ptr<Target>;
+  using TargetConstPtr = std::shared_ptr<const Target>;
 
 }  // namespace decision_simple
 

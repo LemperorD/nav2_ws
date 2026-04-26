@@ -13,8 +13,6 @@
 #include "std_msgs/msg/u_int8.hpp"
 
 namespace decision_simple {
-  using GameStatus = pb_rm_interfaces::msg::GameStatus;
-  using RobotStatus = pb_rm_interfaces::msg::RobotStatus;
   using GameProgress = uint8_t;
   using namespace std::chrono_literals;
 
@@ -65,10 +63,14 @@ namespace decision_simple {
       gameStatusController_ = std::make_shared<rclcpp::Node>(
           "game_status_publisher");
 
-      game_status_pub_ = gameStatusController_->create_publisher<GameStatus>(
-          "referee/game_status", rclcpp::QoS(10));
-      robot_status_pub_ = gameStatusController_->create_publisher<RobotStatus>(
-          "referee/robot_status", rclcpp::QoS(10));
+      game_status_pub_ =
+          gameStatusController_
+              ->create_publisher<pb_rm_interfaces::msg::GameStatus>(
+                  "referee/game_status", rclcpp::QoS(10));
+      robot_status_pub_ =
+          gameStatusController_
+              ->create_publisher<pb_rm_interfaces::msg::RobotStatus>(
+                  "referee/robot_status", rclcpp::QoS(10));
       chassis_mode_sub_ =
           gameStatusController_->create_subscription<std_msgs::msg::UInt8>(
               "chassis_mode", rclcpp::QoS(10),
@@ -172,7 +174,7 @@ namespace decision_simple {
 
     void SendGameStatus(GameProgress theGameProgress) {
       constexpr int32_t sendingDurationSeconds = 300;
-      GameStatus gameStatus;
+      pb_rm_interfaces::msg::GameStatus gameStatus;
       gameStatus.game_progress = theGameProgress;
       gameStatus.stage_remain_time = sendingDurationSeconds;
       PublishAndSpin(game_status_pub_, gameStatus);
@@ -180,7 +182,7 @@ namespace decision_simple {
 
     void SendRobotStatus(uint16_t hp, uint16_t ammo,
                          bool is_hp_deduced = false) {
-      RobotStatus status;
+      pb_rm_interfaces::msg::RobotStatus status;
       status.current_hp = hp;
       status.projectile_allowance_17mm = ammo;
       status.is_hp_deduced = is_hp_deduced;
@@ -217,8 +219,10 @@ namespace decision_simple {
     std::shared_ptr<decision_simple::DecisionSimple> node_under_test_;
     rclcpp::Node::SharedPtr gameStatusController_;
 
-    rclcpp::Publisher<GameStatus>::SharedPtr game_status_pub_;
-    rclcpp::Publisher<RobotStatus>::SharedPtr robot_status_pub_;
+    rclcpp::Publisher<pb_rm_interfaces::msg::GameStatus>::SharedPtr
+        game_status_pub_;
+    rclcpp::Publisher<pb_rm_interfaces::msg::RobotStatus>::SharedPtr
+        robot_status_pub_;
 
     rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr chassis_mode_sub_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr
@@ -274,19 +278,24 @@ namespace decision_simple {
       DecisionGateCases, DecisionSimpleGateTest,
       testing::Values(
           // 仅发送 game（不发送 robot）：应无输出。
-          MakeGateCase(false, 0.0, false, true, GameStatus::RUNNING, 500ms,
+          MakeGateCase(false, 0.0, false, true,
+                       pb_rm_interfaces::msg::GameStatus::RUNNING, 500ms,
                        false),
           // 要求 RUNNING，但当前为 COUNT_DOWN：应无输出。
-          MakeGateCase(true, 0.1, true, true, GameStatus::COUNT_DOWN, 600ms,
+          MakeGateCase(true, 0.1, true, true,
+                       pb_rm_interfaces::msg::GameStatus::COUNT_DOWN, 600ms,
                        false),
           // 要求 RUNNING，但未发送 game 状态：应无输出。
-          MakeGateCase(true, 0.0, true, false, GameStatus::NOT_START, 500ms,
+          MakeGateCase(true, 0.0, true, false,
+                       pb_rm_interfaces::msg::GameStatus::NOT_START, 500ms,
                        false),
           // 要求 RUNNING，但未达到 start_delay：应无输出。
-          MakeGateCase(true, 0.8, true, true, GameStatus::RUNNING, 300ms,
+          MakeGateCase(true, 0.8, true, true,
+                       pb_rm_interfaces::msg::GameStatus::RUNNING, 300ms,
                        false),
           // 要求 RUNNING 且达到 start_delay：应输出底盘模式与默认目标。
-          MakeGateCase(true, 0.1, true, true, GameStatus::RUNNING, 1400ms, true,
+          MakeGateCase(true, 0.1, true, true,
+                       pb_rm_interfaces::msg::GameStatus::RUNNING, 1400ms, true,
                        1u, true)));
 
   // 1.1) 门测试：根据参数决定是否允许输出，并在允许时校验模式与目标。
@@ -453,12 +462,12 @@ namespace decision_simple {
   TEST_F(DecisionSimpleRunningGateTest,
          LeaveRunning_ResetsGate_NoFurtherOutput) {
     SendRobotStatus(500, 120, false);
-    SendGameStatus(GameStatus::RUNNING);
+    SendGameStatus(pb_rm_interfaces::msg::GameStatus::RUNNING);
     ASSERT_TRUE(WaitForGoalAtLeast(1, 1200ms))
         << "门复位测试失败：RUNNING 阶段超时未收到目标点。";
 
     ClearReceived();
-    SendGameStatus(GameStatus::GAME_OVER);
+    SendGameStatus(pb_rm_interfaces::msg::GameStatus::GAME_OVER);
     SpinFor(500ms);
 
     EXPECT_EQ(ChassisCount(), 0u)

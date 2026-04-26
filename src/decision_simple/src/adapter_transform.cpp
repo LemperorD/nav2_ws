@@ -48,4 +48,51 @@ namespace decision_simple {
     return theRobotStatus;
   }
 
+  GameStatus ConvertGameStatus(
+      const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
+    GameStatus status;
+    if (!msg) {
+      throw std::invalid_argument(
+          "ConvertGameStatus received nullptr GameStatus message");
+    }
+    status.game_progress = msg->game_progress;
+    status.stage_remain_time = msg->stage_remain_time;
+    return status;
+  }
+
+  Armors ConvertArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
+    Armors armors;
+    if (!msg) {
+      throw std::invalid_argument(
+          "ConvertArmors received nullptr Armors message");
+    }
+
+    armors.frame_id = msg->header.frame_id;
+    for (const auto& ros_armor : msg->armors) {
+      Armor armor;
+      armor.pose = ConvertPose(ros_armor.pose);
+      // armor_id will be set to 0 by default
+      armors.items.push_back(armor);
+    }
+
+    return armors;
+  }
+
+  Target ConvertTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg) {
+    Target target;
+    if (!msg) {
+      throw std::invalid_argument(
+          "ConvertTarget received nullptr Target message");
+    }
+
+    target.frame_id = msg->header.frame_id;
+    target.position.pos_x = msg->position.x;
+    target.position.pos_y = msg->position.y;
+    target.position.pos_z = msg->position.z;
+    target.yaw = msg->yaw;
+    target.tracking = msg->tracking;
+
+    return target;
+  }
+
 }  // namespace decision_simple
