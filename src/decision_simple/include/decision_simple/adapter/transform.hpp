@@ -37,6 +37,7 @@ namespace decision_simple {
 
   /// Convert ROS Target message to domain Target
   /// @throws std::invalid_argument if msg is nullptr
-  Target ConvertTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
+  Target ConvertTarget(
+      const auto_aim_interfaces::msg::Target::SharedPtr ros_targetmsg);
 
 }  // namespace decision_simple

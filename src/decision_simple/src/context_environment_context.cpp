@@ -10,8 +10,7 @@ namespace decision_simple {
     // TODO: Implement state aggregation from armors
   }
 
-  void EnvironmentContext::onTarget(
-      const auto_aim_interfaces::msg::Target::SharedPtr msg) {
+  void EnvironmentContext::onTarget(const Target msg) {
     // TODO: Implement state aggregation from target
   }
 

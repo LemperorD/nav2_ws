@@ -87,8 +87,7 @@ namespace decision_simple {
 
   /// Single armor target
   struct Armor {
-    Pose3D pose;           // Armor position and orientation
-    uint8_t armor_id = 0;  // Armor identifier
+    Pose3D pose;  // Armor position and orientation
   };
 
   /// Collection of visible armors
@@ -100,8 +99,9 @@ namespace decision_simple {
 
   /// Tracked target (single enemy)
   struct Target {
-    std::string frame_id;   // Coordinate frame ID
-    Pose3D position;        // Position (x, y, z)
+    Header header;
+
+    Position position;      // Position (x, y, z)
     double yaw = 0.0;       // Yaw angle for orientation
     bool tracking = false;  // Whether actively tracking
   };

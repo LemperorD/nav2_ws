@@ -33,7 +33,7 @@ namespace decision_simple {
     void onArmors(const Armors& msg);
 
     /// Update environment state from target
-    void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
+    void onTarget(const Target msg);
 
     /// Update environment state from game status
     void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);

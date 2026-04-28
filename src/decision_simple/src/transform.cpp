@@ -83,4 +83,17 @@ namespace decision_simple {
     theArmor.pose = ConvertPose(ros_armormsg.pose);
     return theArmor;
   }
+
+  Target ConvertTarget(
+      const auto_aim_interfaces::msg::Target::SharedPtr ros_targetmsg) {
+    Target theTarget;
+    theTarget.header.stamp.nanosec = ros_targetmsg->header.stamp.nanosec;
+    theTarget.header.stamp.sec = ros_targetmsg->header.stamp.sec;
+    theTarget.header.frame_id = ros_targetmsg->header.frame_id;
+
+    theTarget.position = ConvertPoint(ros_targetmsg->position);
+    theTarget.yaw = ros_targetmsg->yaw;
+    theTarget.tracking = ros_targetmsg->tracking;
+    return theTarget;
+  }
 }  // namespace decision_simple

@@ -44,13 +44,11 @@ namespace decision_simple {
                                                    double yaw) const;
 
     bool detectEnemy(const Armors& armors,
-                     const std::optional<auto_aim_interfaces::msg::Target>&
-                         target_opt) const;
+                     const std::optional<Target>& target_opt) const;
 
     bool buildAttackGoal(geometry_msgs::msg::PoseStamped& out,
                          const Armors& armors,
-                         const std::optional<auto_aim_interfaces::msg::Target>&
-                             target_opt) const;
+                         const std::optional<Target>& target_opt) const;
 
     bool buildSupplyGoal(geometry_msgs::msg::PoseStamped& out,
                          const RobotStatus& status) const;
@@ -133,7 +131,7 @@ namespace decision_simple {
 
     Armors last_armors_{};
     bool has_armors_{false};
-    std::optional<auto_aim_interfaces::msg::Target> last_target_opt_;
+    std::optional<Target> last_target_opt_;
 
     State state_{State::DEFAULT};
 

@@ -154,6 +154,7 @@ namespace decision_simple {
     last_robot_status_ = ConvertRobotStatus(msg);
     has_robot_status_ = true;
   }
+  // TODO
   void DecisionSimple::onGameStatus(
       const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -190,11 +191,14 @@ namespace decision_simple {
     last_armors_ = ConvertArmors(msg);
     has_armors_ = true;
   }
-
+  // TODO
   void DecisionSimple::onTarget(
       const auto_aim_interfaces::msg::Target::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
-    last_target_opt_ = *msg;
+
+    environment_->onTarget(ConvertTarget(msg));
+
+    last_target_opt_ = ConvertTarget(msg);
   }
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
@@ -206,7 +210,7 @@ namespace decision_simple {
     rclcpp::Time match_start_time;
     Armors armors;
     bool has_armors = false;
-    std::optional<auto_aim_interfaces::msg::Target> target_opt;
+    std::optional<Target> target_opt;
 
     {
       std::lock_guard<std::mutex> lk(mtx_);
@@ -410,8 +414,7 @@ namespace decision_simple {
   }
 
   bool DecisionSimple::detectEnemy(
-      const Armors& armors,
-      const std::optional<auto_aim_interfaces::msg::Target>& target_opt) const {
+      const Armors& armors, const std::optional<Target>& target_opt) const {
     if (target_opt.has_value() && target_opt->tracking) {
       const double x = target_opt->position.x;
       const double y = target_opt->position.y;
@@ -434,7 +437,7 @@ namespace decision_simple {
 
   bool DecisionSimple::buildAttackGoal(
       geometry_msgs::msg::PoseStamped& out, const Armors& armors,
-      const std::optional<auto_aim_interfaces::msg::Target>& target_opt) const {
+      const std::optional<Target>& target_opt) const {
     if (target_opt.has_value() && target_opt->tracking) {
       const std::string frame = (!target_opt->header.frame_id.empty())
                                   ? target_opt->header.frame_id
