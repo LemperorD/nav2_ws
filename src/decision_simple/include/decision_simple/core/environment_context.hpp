@@ -65,10 +65,11 @@ namespace decision_simple {
     RobotStatus last_robot_status_{};
     bool has_game_status_{false};
     bool match_started_{false};
-    rclcpp::Time match_start_time_{0, 0, RCL_ROS_TIME};
+    std::chrono::nanoseconds match_start_time_{};
     bool has_armors_{false};
     Armors last_armors_{};
     std::optional<Target> last_target_opt_;
+    uint8_t last_game_status_{0};
   };
 
 }  // namespace decision_simple

@@ -162,7 +162,7 @@ namespace decision_simple {
     environment_->onGameStatus(ConvertGameStatus(msg));
 
     const uint8_t prev = last_game_status_;
-    last_game_status_ = ConvertGameStatus(msg).game_progress;
+    last_game_status_ = msg->game_progress;
     has_game_status_ = true;
 
     // 从“非比赛中” -> “比赛中(4)”，开始新一轮倒计时
@@ -208,6 +208,7 @@ namespace decision_simple {
   void DecisionSimple::tick() {
     // snapshot
 
+    Snapshot snapshot;
     void tickForContext();
     RobotStatus rs;
     bool has_rs = false;
@@ -217,12 +218,6 @@ namespace decision_simple {
     Armors armors;
     bool has_armors = false;
     std::optional<Target> target_opt;
-
-    if (!has_rs) {
-      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                            "Waiting for robot_status...");
-      return;
-    }
 
     {
       std::lock_guard<std::mutex> lk(mtx_);
@@ -238,6 +233,12 @@ namespace decision_simple {
         armors = last_armors_;
       }
       target_opt = last_target_opt_;
+    }
+
+    if (!has_rs) {
+      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                            "Waiting for robot_status...");
+      return;
     }
 
     const auto now = this->now();

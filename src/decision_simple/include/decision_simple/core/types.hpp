@@ -1,8 +1,10 @@
 #ifndef DECISION_SIMPLE__CORE__TYPES_HPP_
 #define DECISION_SIMPLE__CORE__TYPES_HPP_
 
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -104,6 +106,17 @@ namespace decision_simple {
     Position position;      // Position (x, y, z)
     double yaw = 0.0;       // Yaw angle for orientation
     bool tracking = false;  // Whether actively tracking
+  };
+
+  struct Snapshot {
+    RobotStatus rs;
+    bool has_rs = false;
+    bool has_gs = false;
+    bool match_started = false;
+    std::chrono::nanoseconds match_start_time;
+    Armors armors;
+    bool has_armors = false;
+    std::optional<Target> target_opt;
   };
 
   // Type aliases for smart pointers

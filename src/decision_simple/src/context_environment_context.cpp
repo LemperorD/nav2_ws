@@ -3,20 +3,27 @@
 namespace decision_simple {
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
-    // TODO: Implement state aggregation from robot status
-    RobotStatus last_robot_status = robot_status;
+    std::lock_guard<std::mutex> lk(mtx_);
+
+    last_robot_status_ = robot_status;
+    has_robot_status_ = true;
   }
 
-  void EnvironmentContext::onArmors(const Armors& msg) {
-    // TODO: Implement state aggregation from armors
+  // it is not work
+  void EnvironmentContext::onGameStatus(const GameStatus game_status) {
   }
 
-  void EnvironmentContext::onTarget(const Target msg) {
-    // TODO: Implement state aggregation from target
+  void EnvironmentContext::onArmors(const Armors& armors) {
+    std::lock_guard<std::mutex> lk(mtx_);
+
+    last_armors_ = armors;
+    has_armors_ = true;
   }
 
-  void EnvironmentContext::onGameStatus(const GameStatus msg) {
-    // TODO: Implement state aggregation from game status
+  void EnvironmentContext::onTarget(const Target target) {
+    std::lock_guard<std::mutex> lk(mtx_);
+
+    last_target_opt_ = target;
   }
 
   bool EnvironmentContext::getRobotPoseMap(double& x, double& y, double& yaw) {
@@ -48,29 +55,22 @@ namespace decision_simple {
   }
 
   void EnvironmentContext::tickForContext() {
-    RobotStatus rs;
-    bool has_rs = false;
-    bool has_gs = false;
-    bool match_started = false;
-    rclcpp::Time match_start_time;
-    Armors armors;
-    bool has_armors = false;
-    std::optional<Target> target_opt;
+    Snapshot snapshot;
 
     {
       std::lock_guard<std::mutex> lk(mtx_);
-      has_rs = has_robot_status_;
-      if (has_rs) {
-        rs = last_robot_status_;
+      snapshot.has_rs = has_robot_status_;
+      if (snapshot.has_rs) {
+        snapshot.rs = last_robot_status_;
       }
-      has_gs = has_game_status_;
-      match_started = match_started_;
-      match_start_time = match_start_time_;
-      has_armors = has_armors_;
-      if (has_armors) {
-        armors = last_armors_;
+      snapshot.has_gs = has_game_status_;
+      snapshot.match_started = match_started_;
+      snapshot.match_start_time = match_start_time_;
+      snapshot.has_armors = has_armors_;
+      if (snapshot.has_armors) {
+        snapshot.armors = last_armors_;
       }
-      target_opt = last_target_opt_;
+      snapshot.target_opt = last_target_opt_;
     }
   }
 }  // namespace decision_simple
