@@ -54,6 +54,15 @@ namespace decision_simple {
     return theRobotStatus;
   }
 
+  GameStatus ConvertGameStatus(
+      const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
+    GameStatus theGameStatus;
+
+    theGameStatus.game_progress = msg->game_progress;
+
+    return theGameStatus;
+  }
+
   Armors ConvertArmors(
       const auto_aim_interfaces::msg::Armors::SharedPtr& ros_armorsmsg) {
     Armors theArmors;

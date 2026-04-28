@@ -14,8 +14,7 @@ namespace decision_simple {
     // TODO: Implement state aggregation from target
   }
 
-  void EnvironmentContext::onGameStatus(
-      const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
+  void EnvironmentContext::onGameStatus(const GameStatus msg) {
     // TODO: Implement state aggregation from game status
   }
 

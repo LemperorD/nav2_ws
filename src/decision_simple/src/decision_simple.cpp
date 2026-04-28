@@ -159,9 +159,12 @@ namespace decision_simple {
       const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
 
+    environment_->onGameStatus(ConvertGameStatus(msg));
+
     const uint8_t prev = last_game_status_;
-    last_game_status_ = msg->game_progress;
+    last_game_status_ = ConvertGameStatus(msg).game_progress;
     has_game_status_ = true;
+
     // 从“非比赛中” -> “比赛中(4)”，开始新一轮倒计时
     if (prev != 4 && last_game_status_ == 4) {
       match_started_ = true;
@@ -182,6 +185,7 @@ namespace decision_simple {
                   "Game left running state, reset match-start gate.");
     }
   }
+
   void DecisionSimple::onArmors(
       const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -191,7 +195,7 @@ namespace decision_simple {
     last_armors_ = ConvertArmors(msg);
     has_armors_ = true;
   }
-  // TODO
+
   void DecisionSimple::onTarget(
       const auto_aim_interfaces::msg::Target::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);

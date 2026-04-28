@@ -36,7 +36,7 @@ namespace decision_simple {
     void onTarget(const Target msg);
 
     /// Update environment state from game status
-    void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
+    void onGameStatus(const GameStatus msg);
 
     /// Get robot pose in map frame
     bool getRobotPoseMap(double& x, double& y, double& yaw);
