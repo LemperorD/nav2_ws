@@ -4,6 +4,7 @@ namespace decision_simple {
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
     // TODO: Implement state aggregation from robot status
+    RobotStatus last_robot_status = robot_status;
   }
 
   void EnvironmentContext::onArmors(const Armors& msg) {
@@ -46,4 +47,30 @@ namespace decision_simple {
     // TODO: Implement throttled goal publishing
   }
 
+  void EnvironmentContext::tickForContext() {
+    RobotStatus rs;
+    bool has_rs = false;
+    bool has_gs = false;
+    bool match_started = false;
+    rclcpp::Time match_start_time;
+    Armors armors;
+    bool has_armors = false;
+    std::optional<Target> target_opt;
+
+    {
+      std::lock_guard<std::mutex> lk(mtx_);
+      has_rs = has_robot_status_;
+      if (has_rs) {
+        rs = last_robot_status_;
+      }
+      has_gs = has_game_status_;
+      match_started = match_started_;
+      match_start_time = match_start_time_;
+      has_armors = has_armors_;
+      if (has_armors) {
+        armors = last_armors_;
+      }
+      target_opt = last_target_opt_;
+    }
+  }
 }  // namespace decision_simple

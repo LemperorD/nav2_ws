@@ -56,6 +56,19 @@ namespace decision_simple {
     /// Publish goal pose with throttling
     void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
                               rclcpp::Time& last_pub, double hz);
+
+    void tickForContext();
+
+  private:
+    mutable std::mutex mtx_;
+    bool has_robot_status_{false};
+    RobotStatus last_robot_status_{};
+    bool has_game_status_{false};
+    bool match_started_{false};
+    rclcpp::Time match_start_time_{0, 0, RCL_ROS_TIME};
+    bool has_armors_{false};
+    Armors last_armors_{};
+    std::optional<Target> last_target_opt_;
   };
 
 }  // namespace decision_simple

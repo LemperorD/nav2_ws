@@ -154,7 +154,7 @@ namespace decision_simple {
     last_robot_status_ = ConvertRobotStatus(msg);
     has_robot_status_ = true;
   }
-  // TODO
+
   void DecisionSimple::onGameStatus(
       const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -207,6 +207,8 @@ namespace decision_simple {
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
     // snapshot
+
+    void tickForContext();
     RobotStatus rs;
     bool has_rs = false;
     bool has_gs = false;
@@ -215,6 +217,12 @@ namespace decision_simple {
     Armors armors;
     bool has_armors = false;
     std::optional<Target> target_opt;
+
+    if (!has_rs) {
+      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                            "Waiting for robot_status...");
+      return;
+    }
 
     {
       std::lock_guard<std::mutex> lk(mtx_);
@@ -230,12 +238,6 @@ namespace decision_simple {
         armors = last_armors_;
       }
       target_opt = last_target_opt_;
-    }
-
-    if (!has_rs) {
-      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                            "Waiting for robot_status...");
-      return;
     }
 
     const auto now = this->now();
