@@ -32,7 +32,7 @@ namespace decision_simple {
       is_game_started = true;
     }
 
-    // 从“比赛中(4)” -> “非比赛中”，复位，为下一局做准备
+    // 从“比赛中(4)” -> “非比赛中”，复位，为下一局做准~备
     if (prev == 4 && last_game_status_ != 4) {
       match_started_ = false;
       match_start_time_ = 0;
