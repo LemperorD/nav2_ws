@@ -154,4 +154,23 @@ namespace decision_simple {
     return {Readiness::Status::READY};
   }
 
+  void EnvironmentContext::updatePose(const double x, const double y,
+                                      const double yaw) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    x_ = x;
+    y_ = y;
+    yaw_ = yaw;
+    has_pose_ = true;
+  }
+
+  bool EnvironmentContext::isNear(double target_x, double target_y,
+                                  double tolerance) const {
+    if (!has_pose_) {
+      return false;
+    }
+    double dx = x_ - target_x;
+    double dy = y_ - target_y;
+    return std::hypot(dx, dy) <= tolerance;
+  }
+
 }  // namespace decision_simple

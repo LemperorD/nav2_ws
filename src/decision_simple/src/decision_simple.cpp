@@ -92,9 +92,18 @@ namespace decision_simple {
     supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
     attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
 
-    const ContextConfig context_config{
-        hp_enter_supply_,     hp_exit_supply_,       ammo_min_,
-        combat_max_distance_, require_game_running_, start_delay_sec_};
+    const ContextConfig context_config{hp_enter_supply_,
+                                       hp_exit_supply_,
+                                       ammo_min_,
+                                       combat_max_distance_,
+                                       require_game_running_,
+                                       start_delay_sec_,
+                                       default_x_,
+                                       default_y_,
+                                       default_yaw_,
+                                       supply_x_,
+                                       supply_y_,
+                                       supply_yaw_};
     environment_ = std::make_unique<EnvironmentContext>(context_config);
 
     // ===== TF init =====
@@ -207,6 +216,18 @@ namespace decision_simple {
       return;
     }
 
+    double x, y, yaw;
+    if (this->getRobotPoseMap(x, y, yaw)) {
+      environment_->updatePose(x, y, yaw);
+    }
+
+    const bool at_center = environment_->isNear(default_x_, default_y_,
+                                                default_arrive_xy_tol_);
+    const bool at_supply = environment_->isNear(supply_x_, supply_y_,
+                                                supply_arrive_xy_tol_);
+    const bool in_center_keep_spin = environment_->isNear(
+        default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
+
     // 受到攻击检测
     if (snapshot.rs.is_hp_deduced) {
       last_attacked_ = now;
@@ -216,10 +237,6 @@ namespace decision_simple {
                                   <= attacked_hold_sec_);
 
     // 到达判断（中心点/补给点）
-    const bool at_center = isNear(default_x_, default_y_,
-                                  default_arrive_xy_tol_);
-    const bool in_center_keep_spin = isNear(
-        default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
     // ================= 1) 补给保持 =================
     if (environment_->state_ == State::SUPPLY) {
@@ -337,18 +354,6 @@ namespace decision_simple {
                             ex.what());
       return false;
     }
-  }
-
-  // 是否到达某点（只看平面距离）
-  bool DecisionSimple::isNear(double gx, double gy, double tol_xy) {
-    double x, y, yaw;
-    (void)yaw;
-    if (!getRobotPoseMap(x, y, yaw)) {
-      return false;
-    }
-    const double dx = x - gx;
-    const double dy = y - gy;
-    return std::hypot(dx, dy) <= tol_xy;
   }
 
   bool DecisionSimple::buildAttackGoal(

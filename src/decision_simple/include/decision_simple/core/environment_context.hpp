@@ -27,6 +27,12 @@ namespace decision_simple {
     double combat_max_distance{8.0};
     bool require_game_running{false};
     double start_delay_sec{5.0};
+    double default_x_{0};
+    double default_y_{0};
+    double default_yaw_{0};
+    double supply_x_{0};
+    double supply_y_{0};
+    double supply_yaw{0};
   };
 
   struct Readiness {
@@ -73,6 +79,8 @@ namespace decision_simple {
 
     void setChassisMode(ChassisMode mode);
     Readiness checkReadiness(int64_t now);
+    void updatePose(const double x, const double y, const double z);
+    bool isNear(double target_x, double target_y, double tolerance) const;
 
     State state_{State::DEFAULT};
 
@@ -80,6 +88,7 @@ namespace decision_simple {
     mutable std::mutex mtx_;
     bool has_robot_status_{false};
     bool match_started_{false};
+    bool has_pose_{false};
     RobotStatus last_robot_status_{};
     bool has_game_status_{false};
     int64_t match_start_time_{};
@@ -97,6 +106,10 @@ namespace decision_simple {
     double combat_max_distance_{8.0};
     bool require_game_running_{false};
     double start_delay_sec_{5.0};
+
+    double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
+    double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};
+    double x_{0.0}, y_{0.0}, yaw_{0.0};
   };
 
 }  // namespace decision_simple

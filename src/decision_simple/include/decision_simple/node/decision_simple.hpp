@@ -49,7 +49,6 @@ namespace decision_simple {
 
     // ====== chassis mode & arrival / attacked helpers ======
     bool getRobotPoseMap(double& x, double& y, double& yaw);
-    bool isNear(double gx, double gy, double tol_xy);
 
     void setAndLogState(State s);
 
