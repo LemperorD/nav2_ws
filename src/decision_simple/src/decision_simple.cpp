@@ -130,9 +130,9 @@ namespace decision_simple {
         std::bind(&DecisionSimple::onTarget, this, std::placeholders::_1));
 
     // init
-    setState(State::DEFAULT);
+    setAndLogState(State::DEFAULT);
 
-    setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
+    publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
     // timer
     const double hz = std::max(1e-6, tick_hz_);
@@ -250,8 +250,8 @@ namespace decision_simple {
 
     // ================= 1) 补给保持 =================
     if (state_ == State::SUPPLY) {
-      if (!isStatusRecovered(snapshot.rs)) {
-        setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
+      if (!environment_->isStatusRecovered(snapshot.rs)) {
+        publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
         const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
                                          supply_yaw_);
@@ -262,9 +262,9 @@ namespace decision_simple {
 
     // ================= 2) 状态差 -> 进补给 =================
     if (environment_->isStatusBad(snapshot.rs)) {
-      setState(State::SUPPLY);
+      setAndLogState(State::SUPPLY);
 
-      setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
+      publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
       const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
                                        supply_yaw_);
@@ -275,7 +275,7 @@ namespace decision_simple {
     // ================= 3) 状态好 -> 有敌攻击 =================
     bool enemy = false;
     if (snapshot.has_armors || snapshot.target_opt.has_value()) {
-      enemy = detectEnemy(snapshot.armors, snapshot.target_opt);
+      enemy = environment_->detectEnemy(snapshot.armors, snapshot.target_opt);
     }
     if (enemy) {
       last_enemy_seen_ = now;
@@ -286,12 +286,12 @@ namespace decision_simple {
                                <= attack_hold_sec_);
 
     if (enemy_recent) {
-      setState(State::ATTACK);
+      setAndLogState(State::ATTACK);
       default_spin_latched_ = false;
       if (attacked_recent) {
-        setChassisMode(ChassisMode::LITTLE_TES);
+        publishChassisMode(ChassisMode::LITTLE_TES);
       } else {
-        setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
+        publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
       }
 
       geometry_msgs::msg::PoseStamped attack_goal;
@@ -311,7 +311,7 @@ namespace decision_simple {
       return;
     }
     // ================= 4) 默认：去中心点 =================
-    setState(State::DEFAULT);
+    setAndLogState(State::DEFAULT);
     // 1. 先进入 0.3m 小圈 -> 小陀螺模式
     if (at_center) {
       default_spin_latched_ = true;
@@ -321,10 +321,11 @@ namespace decision_simple {
       default_spin_latched_ = false;
     }
     if (attacked_recent) {
-      setChassisMode(ChassisMode::LITTLE_TES);
+      publishChassisMode(ChassisMode::LITTLE_TES);
+
     } else {
-      setChassisMode(default_spin_latched_ ? ChassisMode::LITTLE_TES
-                                           : ChassisMode::CHASSIS_FOLLOWED);
+      publishChassisMode(default_spin_latched_ ? ChassisMode::LITTLE_TES
+                                               : ChassisMode::CHASSIS_FOLLOWED);
     }
     const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_,
                                      default_yaw_);
@@ -345,18 +346,6 @@ namespace decision_simple {
     q.setRPY(0.0, 0.0, yaw);
     p.pose.orientation = tf2::toMsg(q);
     return p;
-  }
-
-  bool DecisionSimple::isStatusBad(const RobotStatus& rs) const {
-    const int hp = static_cast<int>(rs.current_hp);
-    const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
-  }
-
-  bool DecisionSimple::isStatusRecovered(const RobotStatus& rs) const {
-    const int hp = static_cast<int>(rs.current_hp);
-    const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp >= hp_exit_supply_) && (ammo > ammo_min_);
   }
 
   // 获取机器人在 map 下的位置
@@ -387,28 +376,6 @@ namespace decision_simple {
     const double dx = x - gx;
     const double dy = y - gy;
     return std::hypot(dx, dy) <= tol_xy;
-  }
-
-  bool DecisionSimple::detectEnemy(
-      const Armors& armors, const std::optional<Target>& target_opt) const {
-    if (target_opt.has_value() && target_opt->tracking) {
-      const double x = target_opt->position.x;
-      const double y = target_opt->position.y;
-      const double z = target_opt->position.z;
-      const double dist = std::sqrt(x * x + y * y + z * z);
-      return dist <= combat_max_distance_;
-    }
-
-    for (const auto& a : armors.armors) {
-      const double x = a.pose.position.x;
-      const double y = a.pose.position.y;
-      const double z = a.pose.position.z;
-      const double dist = std::sqrt(x * x + y * y + z * z);
-      if (dist <= combat_max_distance_) {
-        return true;
-      }
-    }
-    return false;
   }
 
   bool DecisionSimple::buildAttackGoal(
@@ -448,27 +415,20 @@ namespace decision_simple {
     return true;
   }
 
-  void DecisionSimple::setState(State s) {
+  void DecisionSimple::setAndLogState(State s) {
     if (state_ == s) {
       return;
     }
     state_ = s;
 
-    // 不再用 state_ 去发布 chassis_mode
     RCLCPP_INFO(this->get_logger(), "State -> %u",
                 static_cast<unsigned>(state_));
   }
 
-  //
   void DecisionSimple::publishChassisMode(ChassisMode mode) {
     std_msgs::msg::UInt8 m;
     m.data = static_cast<uint8_t>(mode);
     chassis_mode_pub_->publish(m);
-  }
-
-  void DecisionSimple::setChassisMode(ChassisMode mode) {
-    current_chassis_mode_ = mode;
-    publishChassisMode(mode);
   }
 
   void DecisionSimple::publishGoalThrottled(

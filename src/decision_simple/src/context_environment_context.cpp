@@ -63,32 +63,26 @@ namespace decision_simple {
     last_target_opt_ = target;
   }
 
-  bool EnvironmentContext::getRobotPoseMap(double& x, double& y, double& yaw) {
-    // TODO: Implement robot pose query
+  bool EnvironmentContext::detectEnemy(
+      const Armors& armors, const std::optional<Target>& target_opt) const {
+    if (target_opt.has_value() && target_opt->tracking) {
+      const double x = target_opt->position.x;
+      const double y = target_opt->position.y;
+      const double z = target_opt->position.z;
+      const double dist = std::sqrt(x * x + y * y + z * z);
+      return dist <= combat_max_distance_;
+    }
+
+    for (const auto& a : armors.armors) {
+      const double x = a.pose.position.x;
+      const double y = a.pose.position.y;
+      const double z = a.pose.position.z;
+      const double dist = std::sqrt(x * x + y * y + z * z);
+      if (dist <= combat_max_distance_) {
+        return true;
+      }
+    }
     return false;
-  }
-
-  bool EnvironmentContext::isNear(double gx, double gy, double tol_xy) {
-    // TODO: Implement proximity check
-    return false;
-  }
-
-  void EnvironmentContext::setState(State s) {
-    // TODO: Implement state setter
-  }
-
-  void EnvironmentContext::publishChassisMode(ChassisMode mode) {
-    // TODO: Implement chassis mode publishing
-  }
-
-  void EnvironmentContext::setChassisMode(ChassisMode mode) {
-    // TODO: Implement chassis mode setter
-  }
-
-  void EnvironmentContext::publishGoalThrottled(
-      const geometry_msgs::msg::PoseStamped& goal, rclcpp::Time& last_pub,
-      double hz) {
-    // TODO: Implement throttled goal publishing
   }
 
   void EnvironmentContext::tickForContext(Snapshot& snapshot) {
@@ -114,4 +108,18 @@ namespace decision_simple {
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
     return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
   }
+
+  bool EnvironmentContext::isStatusRecovered(const RobotStatus& rs) const {
+    const int hp = static_cast<int>(rs.current_hp);
+    const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
+    return (hp >= hp_exit_supply_) && (ammo > ammo_min_);
+  }
+
+  void EnvironmentContext::setState(State s) {
+    if (state_ == s) {
+      return;
+    }
+    state_ = s;
+  }
+
 }  // namespace decision_simple

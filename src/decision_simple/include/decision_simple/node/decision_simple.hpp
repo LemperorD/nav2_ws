@@ -27,7 +27,6 @@ namespace decision_simple {
   private:
     // callbacks
     void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
-
     void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
     void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
     void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
@@ -36,15 +35,9 @@ namespace decision_simple {
     void tick();
 
     // helpers
-    bool isStatusBad(const RobotStatus& rs) const;
-    bool isStatusRecovered(const RobotStatus& rs) const;
-
     geometry_msgs::msg::PoseStamped makePoseXYZYaw(const std::string& frame,
                                                    double x, double y,
                                                    double yaw) const;
-
-    bool detectEnemy(const Armors& armors,
-                     const std::optional<Target>& target_opt) const;
 
     bool buildAttackGoal(geometry_msgs::msg::PoseStamped& out,
                          const Armors& armors,
@@ -57,10 +50,9 @@ namespace decision_simple {
     bool getRobotPoseMap(double& x, double& y, double& yaw);
     bool isNear(double gx, double gy, double tol_xy);
 
-    void setState(State s);
+    void setAndLogState(State s);
 
     void publishChassisMode(ChassisMode mode);
-    void setChassisMode(ChassisMode mode);
 
     void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
                               rclcpp::Time& last_pub, double hz);

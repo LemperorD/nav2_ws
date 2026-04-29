@@ -51,25 +51,16 @@ namespace decision_simple {
 
     bool getRobotPoseMap(double& x, double& y, double& yaw);
 
-    /// Check if robot is near target position
-    bool isNear(double gx, double gy, double tol_xy);
-
-    /// Set robot state
-    void setState(State s);
-
-    /// Publish chassis mode
-    void publishChassisMode(ChassisMode mode);
-
-    /// Set chassis mode
-    void setChassisMode(ChassisMode mode);
-
-    /// Publish goal pose with throttling
-    void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
-                              rclcpp::Time& last_pub, double hz);
-
     void tickForContext(Snapshot& snapshot);
 
     bool isStatusBad(const RobotStatus& rs) const;
+    bool isStatusRecovered(const RobotStatus& rs) const;
+
+    bool detectEnemy(const Armors& armors,
+                     const std::optional<Target>& target_opt) const;
+
+    void setState(State s);
+    void setChassisMode(ChassisMode mode);
 
   private:
     mutable std::mutex mtx_;
@@ -87,7 +78,10 @@ namespace decision_simple {
     bool is_game_over{false};
 
     int hp_enter_supply_{120};
+    int hp_exit_supply_{300};
     int ammo_min_{0};
+    double combat_max_distance_{8.0};
+    State state_{State::DEFAULT};
   };
 
 }  // namespace decision_simple
