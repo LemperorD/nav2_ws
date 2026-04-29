@@ -228,27 +228,22 @@ namespace decision_simple {
     snapshot.in_center_keep_spin = environment_->isNear(
         default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
-    // Build attack goal if enemy is detected
-    if (snapshot.enemy) {
-      controller_->buildAttackGoal(snapshot, snapshot.armors, snapshot.target_opt);
-    }
-
     // Delegate to Decision class for complete tick decision logic
     auto action = controller_->computeAction(snapshot);
-    
+
     // Apply action: update state and publish
     setAndLogState(action.next_state);
     publishChassisMode(action.chassis_mode);
-    
+
     if (action.should_publish_goal) {
       const auto goal = makePoseXYZYaw(frame_id_, action.target_x,
                                        action.target_y, action.target_yaw);
-      
+
       // For attack state, also publish debug pose
       if (action.next_state == State::ATTACK) {
         debug_attack_pose_pub_->publish(goal);
       }
-      
+
       // Throttle based on state
       if (action.next_state == State::SUPPLY) {
         publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);

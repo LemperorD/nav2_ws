@@ -16,7 +16,7 @@ namespace decision_simple {
         default_y_(context_config.default_y_),
         default_yaw_(context_config.default_yaw_) {
   }
-  DecisionAction Decision::compute(const Snapshot& s, double now_sec) {
+  DecisionAction Decision::compute(const Snapshot& s) {
     DecisionAction action;
     if (s.state == State::SUPPLY) {
       if (!isStatusRecovered(s.rs)) {
@@ -89,7 +89,7 @@ namespace decision_simple {
   DecisionAction Decision::computeAction(const Snapshot& snapshot) const {
     DecisionAction action;
     action.should_publish_goal = true;
-    
+
     // ================= 1) 补给保持 =================
     if (snapshot.state == State::SUPPLY) {
       if (!isStatusRecovered(snapshot.rs)) {
@@ -119,6 +119,9 @@ namespace decision_simple {
       action.target_x = default_x_;
       action.target_y = default_y_;
       action.target_yaw = default_yaw_;
+
+      // Compute attack goal (modifies snapshot in-place)
+      buildAttackGoal(const_cast<Snapshot&>(snapshot), snapshot.armors, snapshot.target_opt);
       
       if (snapshot.attacked_recent) {
         action.chassis_mode = ChassisMode::LITTLE_TES;
@@ -140,7 +143,7 @@ namespace decision_simple {
     action.target_x = default_x_;
     action.target_y = default_y_;
     action.target_yaw = default_yaw_;
-    
+
     // 1. 先进入 0.3m 小圈 -> 小陀螺模式
     if (snapshot.at_center) {
       action.default_spin_latched = true;
@@ -149,13 +152,15 @@ namespace decision_simple {
     if (!snapshot.in_center_keep_spin) {
       action.default_spin_latched = false;
     }
-    
+
     if (snapshot.attacked_recent) {
       action.chassis_mode = ChassisMode::LITTLE_TES;
     } else {
-      action.chassis_mode = action.default_spin_latched ? ChassisMode::LITTLE_TES : ChassisMode::CHASSIS_FOLLOWED;
+      action.chassis_mode = action.default_spin_latched
+                              ? ChassisMode::LITTLE_TES
+                              : ChassisMode::CHASSIS_FOLLOWED;
     }
-    
+
     return action;
   }
 
