@@ -32,12 +32,13 @@
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 namespace decision_simple {
+  using nanoseconds = int64_t;
 
   DecisionSimple::DecisionSimple(const rclcpp::NodeOptions& options)
       : Node("decision_simple", options) {
-    environment_ = std::make_unique<EnvironmentContext>();
-
     // ===== params =====
+    ContextConfig context_config;
+
     frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
     base_frame_id_ = this->declare_parameter<std::string>("base_frame_id",
                                                           "base_footprint");
@@ -77,7 +78,8 @@ namespace decision_simple {
         "supply_arrive_xy_tol", 0.30);
 
     hp_enter_supply_ = this->declare_parameter<int>("hp_survival_enter", 120);
-    hp_exit_supply_ = this->declare_parameter<int>("hp_survival_exit", 300);
+    hp_exit_supply_ = hp_exit_supply_ = this->declare_parameter<int>(
+        "hp_survival_exit", 300);
     ammo_min_ = this->declare_parameter<int>("ammo_min", 0);
 
     combat_max_distance_ = this->declare_parameter<double>(
@@ -92,6 +94,8 @@ namespace decision_simple {
     default_goal_hz_ = this->declare_parameter<double>("default_goal_hz", 2.0);
     supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
     attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
+
+    environment_ = std::make_unique<EnvironmentContext>();
 
     // ===== TF init =====
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -181,9 +185,6 @@ namespace decision_simple {
     std::lock_guard<std::mutex> lk(mtx_);
 
     environment_->onArmors(ConvertArmors(msg));
-
-    last_armors_ = ConvertArmors(msg);
-    has_armors_ = true;
   }
 
   void DecisionSimple::onTarget(
@@ -191,8 +192,6 @@ namespace decision_simple {
     std::lock_guard<std::mutex> lk(mtx_);
 
     environment_->onTarget(ConvertTarget(msg));
-
-    last_target_opt_ = ConvertTarget(msg);
   }
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
@@ -209,7 +208,7 @@ namespace decision_simple {
     }
 
     const auto now = this->now();
-    // 比赛开始+5s延时
+    // 比赛开始延时
     if (require_game_running_) {
       if (!snapshot.has_gs) {
         RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
@@ -223,8 +222,8 @@ namespace decision_simple {
         return;
       }
 
-      const int64_t match_start_ns =
-          static_cast<int64_t>(snapshot.match_start_time.sec) * 1000000000LL
+      const nanoseconds match_start_ns =
+          static_cast<nanoseconds>(snapshot.match_start_time.sec) * 1000000000LL
           + snapshot.match_start_time.nanosec;
       const double elapsed = (now.nanoseconds() - match_start_ns) * 1e-9;
       if (elapsed < start_delay_sec_) {
@@ -262,7 +261,7 @@ namespace decision_simple {
     }
 
     // ================= 2) 状态差 -> 进补给 =================
-    if (isStatusBad(snapshot.rs)) {
+    if (environment_->isStatusBad(snapshot.rs)) {
       setState(State::SUPPLY);
 
       setChassisMode(ChassisMode::CHASSIS_FOLLOWED);

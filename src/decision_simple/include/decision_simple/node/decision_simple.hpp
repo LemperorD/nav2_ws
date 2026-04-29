@@ -126,12 +126,6 @@ namespace decision_simple {
 
     // ===== Cache/State =====
     mutable std::mutex mtx_;
-    RobotStatus last_robot_status_{};
-    bool has_robot_status_{false};
-
-    Armors last_armors_{};
-    bool has_armors_{false};
-    std::optional<Target> last_target_opt_;
 
     State state_{State::DEFAULT};
 
@@ -145,11 +139,7 @@ namespace decision_simple {
     geometry_msgs::msg::PoseStamped last_attack_goal_{};
     bool has_last_attack_goal_{false};
 
-    bool has_game_status_{false};
-    uint8_t last_game_status_{0};
-    bool match_started_{false};
     rclcpp::Time last_attacked_{0, 0, RCL_ROS_TIME};
-    rclcpp::Time match_start_time_{0, 0, RCL_ROS_TIME};
 
     std::unique_ptr<EnvironmentContext> environment_;
   };

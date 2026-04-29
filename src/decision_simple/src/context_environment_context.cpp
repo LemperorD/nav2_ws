@@ -1,6 +1,10 @@
 #include "decision_simple/core/environment_context.hpp"
 
 namespace decision_simple {
+  EnvironmentContext::EnvironmentContext(const ContextConfig& context_config)
+      : hp_enter_supply_(context_config.hp_enter_supply),
+        ammo_min_((context_config.ammo_min)) {
+  }
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
     std::lock_guard<std::mutex> lk(mtx_);
@@ -103,5 +107,11 @@ namespace decision_simple {
       snapshot.armors = last_armors_;
     }
     snapshot.target_opt = last_target_opt_;
+  }
+
+  bool EnvironmentContext::isStatusBad(const RobotStatus& rs) const {
+    const int hp = static_cast<int>(rs.current_hp);
+    const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
+    return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
   }
 }  // namespace decision_simple

@@ -19,12 +19,19 @@
 #include "types.hpp"
 
 namespace decision_simple {
-
+  struct ContextConfig {
+    int hp_enter_supply;
+    int hp_exit_supply;
+    int ammo_min;
+    // ... 其他参数
+  };
   /// Environment state aggregation layer
   /// Translates low-level ROS messages into high-level business facts
   class EnvironmentContext {
   public:
-    EnvironmentContext() = default;
+    explicit EnvironmentContext() = default;
+
+    explicit EnvironmentContext(const ContextConfig& context_config);
 
     /// Update environment state from robot status
     void onRobotStatus(const RobotStatus& robot_status);
@@ -62,6 +69,8 @@ namespace decision_simple {
 
     void tickForContext(Snapshot& snapshot);
 
+    bool isStatusBad(const RobotStatus& rs) const;
+
   private:
     mutable std::mutex mtx_;
     bool has_robot_status_{false};
@@ -76,6 +85,9 @@ namespace decision_simple {
     bool default_spin_latched_{false};
     bool is_game_started{false};
     bool is_game_over{false};
+
+    int hp_enter_supply_{120};
+    int ammo_min_{0};
   };
 
 }  // namespace decision_simple
