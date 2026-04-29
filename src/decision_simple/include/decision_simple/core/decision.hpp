@@ -6,8 +6,16 @@ namespace decision_simple {
   public:
     explicit Decision(const ContextConfig& context_config);
     DecisionAction compute(const Snapshot& s, double now_sec);
+    
+    // Complete tick decision logic - takes snapshot and returns full action
+    DecisionAction computeAction(const Snapshot& snapshot) const;
+    
     bool isStatusRecovered(const RobotStatus& rs) const;
     bool isStatusBad(const RobotStatus& rs) const;
+
+    // Attack goal computation
+    bool buildAttackGoal(Snapshot& snapshot, const Armors& armors,
+                         const std::optional<Target>& target_opt) const;
 
   private:
     int hp_enter_supply_{120};

@@ -40,10 +40,6 @@ namespace decision_simple {
                                                    double x, double y,
                                                    double yaw) const;
 
-    bool buildAttackGoal(geometry_msgs::msg::PoseStamped& out,
-                         const Armors& armors,
-                         const std::optional<Target>& target_opt) const;
-
     bool buildSupplyGoal(geometry_msgs::msg::PoseStamped& out,
                          const RobotStatus& status) const;
     void handleGateLog(Readiness& readiness);

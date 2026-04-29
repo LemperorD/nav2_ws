@@ -91,6 +91,8 @@ namespace decision_simple {
     bool require_game_running_{false};
     double start_delay_sec_{5.0};
     State state_{State::DEFAULT};
+    double attack_hold_sec_{1.0};
+    double attacked_hold_sec_{1.5};
 
     double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
     double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};

@@ -222,104 +222,42 @@ namespace decision_simple {
       environment_->updatePose(x, y, yaw);
     }
 
-    const bool at_center = environment_->isNear(default_x_, default_y_,
-                                                default_arrive_xy_tol_);
-    const bool in_center_keep_spin = environment_->isNear(
+    Snapshot snapshot = environment_->getSnapshot(stamp);
+    snapshot.at_center = environment_->isNear(default_x_, default_y_,
+                                              default_arrive_xy_tol_);
+    snapshot.in_center_keep_spin = environment_->isNear(
         default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
-    Snapshot snapshot = environment_->getSnapshot(stamp);
-
-    const int64_t last_enemy_ns =
-        (static_cast<int64_t>(snapshot.last_enemy_seen_.sec) * 1000000000LL)
-        + snapshot.last_enemy_seen_.nanosec;
-    const bool enemy_recent = (last_enemy_ns != 0)
-                           && ((now.nanoseconds() - last_enemy_ns) * 1e-9
-                               <= attack_hold_sec_);
-
-    // 受到攻击检测
-    if (snapshot.rs.is_hp_deduced) {
-      snapshot.last_attacked_ = stamp;
+    // Build attack goal if enemy is detected
+    if (snapshot.enemy) {
+      controller_->buildAttackGoal(snapshot, snapshot.armors, snapshot.target_opt);
     }
-    const int64_t last_attacked_ns =
-        (static_cast<int64_t>(snapshot.last_attacked_.sec) * 1000000000LL)
-        + snapshot.last_attacked_.nanosec;
-    const bool attacked_recent = (last_attacked_ns != 0)
-                              && ((now.nanoseconds() - last_attacked_ns) * 1e-9
-                                  <= attacked_hold_sec_);
 
-    // 到达判断（中心点/补给点）
-
-    // ================= 1) 补给保持 =================
-    if (snapshot.state == State::SUPPLY) {
-      if (!controller_->isStatusRecovered(snapshot.rs)) {
-        publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
-
-        const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
-                                         supply_yaw_);
+    // Delegate to Decision class for complete tick decision logic
+    auto action = controller_->computeAction(snapshot);
+    
+    // Apply action: update state and publish
+    setAndLogState(action.next_state);
+    publishChassisMode(action.chassis_mode);
+    
+    if (action.should_publish_goal) {
+      const auto goal = makePoseXYZYaw(frame_id_, action.target_x,
+                                       action.target_y, action.target_yaw);
+      
+      // For attack state, also publish debug pose
+      if (action.next_state == State::ATTACK) {
+        debug_attack_pose_pub_->publish(goal);
+      }
+      
+      // Throttle based on state
+      if (action.next_state == State::SUPPLY) {
         publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
-        return;
-      }
-    }
-
-    // ================= 2) 状态差 -> 进补给 =================
-    if (environment_->isStatusBad(snapshot.rs)) {
-      setAndLogState(State::SUPPLY);
-
-      publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
-
-      const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
-                                       supply_yaw_);
-      publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
-      return;
-    }
-
-    // ================= 3) 状态好 -> 有敌攻击 =================
-
-    if (enemy_recent) {
-      setAndLogState(State::ATTACK);
-      default_spin_latched_ = false;
-      if (attacked_recent) {
-        publishChassisMode(ChassisMode::LITTLE_TES);
+      } else if (action.next_state == State::ATTACK) {
+        publishGoalThrottled(goal, last_attack_pub_, attack_goal_hz_);
       } else {
-        publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
+        publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
       }
-
-      geometry_msgs::msg::PoseStamped attack_goal;
-      if (buildAttackGoal(attack_goal, snapshot.armors, snapshot.target_opt)) {
-        last_attack_goal_ = attack_goal;
-        has_last_attack_goal_ = true;
-        debug_attack_pose_pub_->publish(attack_goal);
-        publishGoalThrottled(attack_goal, last_attack_pub_, attack_goal_hz_);
-        return;
-      }
-
-      if (has_last_attack_goal_) {
-        debug_attack_pose_pub_->publish(last_attack_goal_);
-        publishGoalThrottled(last_attack_goal_, last_attack_pub_,
-                             attack_goal_hz_);
-      }
-      return;
     }
-    // ================= 4) 默认：去中心点 =================
-    setAndLogState(State::DEFAULT);
-    // 1. 先进入 0.3m 小圈 -> 小陀螺模式
-    if (at_center) {
-      default_spin_latched_ = true;
-    }
-    // 2. 出了 0.8m 大圈，取消陀螺
-    if (!in_center_keep_spin) {
-      default_spin_latched_ = false;
-    }
-    if (attacked_recent) {
-      publishChassisMode(ChassisMode::LITTLE_TES);
-
-    } else {
-      publishChassisMode(default_spin_latched_ ? ChassisMode::LITTLE_TES
-                                               : ChassisMode::CHASSIS_FOLLOWED);
-    }
-    const auto goal = makePoseXYZYaw(frame_id_, default_x_, default_y_,
-                                     default_yaw_);
-    publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
   }
 
   // ================= helpers =================
@@ -354,43 +292,6 @@ namespace decision_simple {
                             ex.what());
       return false;
     }
-  }
-
-  bool DecisionSimple::buildAttackGoal(
-      geometry_msgs::msg::PoseStamped& out, const Armors& armors,
-      const std::optional<Target>& target_opt) const {
-    if (target_opt.has_value() && target_opt->tracking) {
-      const std::string frame = (!target_opt->header.frame_id.empty())
-                                  ? target_opt->header.frame_id
-                                  : frame_id_;
-      out = makePoseXYZYaw(frame, target_opt->position.x,
-                           target_opt->position.y, target_opt->yaw);
-      return true;
-    }
-
-    if (armors.armors.empty()) {
-      return false;
-    }
-
-    const auto* best = &armors.armors.front();
-    double best_dist = 1e18;
-    for (const auto& a : armors.armors) {
-      const double x = a.pose.position.x;
-      const double y = a.pose.position.y;
-      const double z = a.pose.position.z;
-      const double dist = std::sqrt(x * x + y * y + z * z);
-      if (dist < best_dist) {
-        best_dist = dist;
-        best = &a;
-      }
-    }
-
-    const std::string frame = (!armors.header.frame_id.empty())
-                                ? armors.header.frame_id
-                                : frame_id_;
-    out = makePoseXYZYaw(frame, best->pose.position.x, best->pose.position.y,
-                         0.0);
-    return true;
   }
 
   void DecisionSimple::setAndLogState(State s) {

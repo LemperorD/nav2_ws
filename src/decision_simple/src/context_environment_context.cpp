@@ -115,6 +115,24 @@ namespace decision_simple {
     if (snapshot.enemy) {
       snapshot.last_enemy_seen_ = now;
     }
+    const int64_t last_enemy_ns =
+        (static_cast<int64_t>(snapshot.last_enemy_seen_.sec) * 1000000000LL)
+        + snapshot.last_enemy_seen_.nanosec;
+    snapshot.enemy_recent = (last_enemy_ns != 0)
+                         && ((now.nanosec - last_enemy_ns) * 1e-9
+                             <= attack_hold_sec_);
+
+    if (snapshot.rs.is_hp_deduced) {
+      snapshot.last_attacked_ = now;
+    }
+    const int64_t last_attacked_ns =
+        (static_cast<int64_t>(snapshot.last_attacked_.sec) * 1000000000LL)
+        + snapshot.last_attacked_.nanosec;
+    snapshot.attacked_recent = (last_attacked_ns != 0)
+                            && ((now.nanosec - last_attacked_ns) * 1e-9
+                                <= attacked_hold_sec_);
+
+    snapshot.default_spin_latched = default_spin_latched_;
     return snapshot;
   }
 

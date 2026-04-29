@@ -45,6 +45,7 @@ namespace decision_simple {
     double target_y;
     double target_yaw;
     bool should_publish_goal;
+    bool default_spin_latched;
   };
 
   struct Quaternion {
@@ -157,6 +158,15 @@ namespace decision_simple {
     bool enemy{false};
     Stamp last_enemy_seen_{0, 0};
     Stamp last_attacked_{0, 0};
+    bool enemy_recent;
+    bool attacked_recent;
+    bool at_center{false};
+    bool in_center_keep_spin{false};
+    bool default_spin_latched{false};
+    // Attack goal caching
+    Position last_attack_position{0.0, 0.0, 0.0};
+    double last_attack_yaw{0.0};
+    bool has_attack_goal{false};
   };
 
   // Type aliases for smart pointers
