@@ -3,11 +3,11 @@
 namespace decision_simple {
 
   EnvironmentContext::EnvironmentContext(const ContextConfig& context_config)
-      : hp_enter_supply_(context_config.hp_enter_supply),
+      : require_game_running_(context_config.require_game_running),
+        hp_enter_supply_(context_config.hp_enter_supply),
         hp_exit_supply_(context_config.hp_exit_supply),
         ammo_min_(context_config.ammo_min),
         combat_max_distance_(context_config.combat_max_distance),
-        require_game_running_(context_config.require_game_running),
         start_delay_sec_(context_config.start_delay_sec),
         default_arrive_xy_tol_(context_config.default_arrive_xy_tol),
         default_spin_keep_xy_tol_(context_config.default_spin_keep_xy_tol) {

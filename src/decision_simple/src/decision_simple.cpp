@@ -67,31 +67,31 @@ namespace decision_simple {
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    goal_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
+    goal_pose_pub_ = this->create_publisher<PoseStampedMsg>(
         goal_pose_topic_, rclcpp::SensorDataQoS());
-    chassis_mode_pub_ = this->create_publisher<std_msgs::msg::UInt8>(
-        chassis_mode_topic_, rclcpp::QoS(10));
-    debug_attack_pose_pub_ =
-        this->create_publisher<geometry_msgs::msg::PoseStamped>(
-            debug_attack_pose_topic_, rclcpp::QoS(10));
+    chassis_mode_pub_ = this->create_publisher<UInt8Msg>(chassis_mode_topic_,
+                                                         rclcpp::QoS(10));
+    debug_attack_pose_pub_ = this->create_publisher<PoseStampedMsg>(
+        debug_attack_pose_topic_, rclcpp::QoS(10));
 
-    robot_status_sub_ =
-        this->create_subscription<pb_rm_interfaces::msg::RobotStatus>(
-            robot_status_topic_, rclcpp::QoS(10),
-            std::bind(&DecisionSimple::onRobotStatus, this,
-                      std::placeholders::_1));
-    game_status_sub_ =
-        this->create_subscription<pb_rm_interfaces::msg::GameStatus>(
-            game_status_topic_, rclcpp::QoS(10),
-            std::bind(&DecisionSimple::onGameStatus, this,
-                      std::placeholders::_1));
-    armors_sub_ = this->create_subscription<auto_aim_interfaces::msg::Armors>(
+    robot_status_sub_ = this->create_subscription<RobotStatusMsg>(
+        robot_status_topic_, rclcpp::QoS(10),
+        std::bind(&DecisionSimple::onRobotStatus, this, std::placeholders::_1));
+    game_status_sub_ = this->create_subscription<GameStatusMsg>(
+        game_status_topic_, rclcpp::QoS(10),
+        std::bind(&DecisionSimple::onGameStatus, this, std::placeholders::_1));
+    armors_sub_ = this->create_subscription<ArmorsMsg>(
         detector_armors_topic_, rclcpp::QoS(10),
         std::bind(&DecisionSimple::onArmors, this, std::placeholders::_1));
-
-    target_sub_ = this->create_subscription<auto_aim_interfaces::msg::Target>(
+    target_sub_ = this->create_subscription<TargetMsg>(
         tracker_target_topic_, rclcpp::QoS(10),
         std::bind(&DecisionSimple::onTarget, this, std::placeholders::_1));
+
+    // Declare frequency parameters before using them
+    tick_hz_ = this->declare_parameter<double>("tick_hz", 20.0);
+    default_goal_hz_ = this->declare_parameter<double>("default_goal_hz", 2.0);
+    supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
+    attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
 
     // init
     setAndLogState(State::DEFAULT);
@@ -104,11 +104,6 @@ namespace decision_simple {
     timer_ = this->create_wall_timer(period,
                                      std::bind(&DecisionSimple::tick, this));
 
-    tick_hz_ = this->declare_parameter<double>("tick_hz", 20.0);
-    default_goal_hz_ = this->declare_parameter<double>("default_goal_hz", 2.0);
-    supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
-    attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
-
     RCLCPP_INFO(this->get_logger(),
                 "decision_simple(min+mode) started. ns=%s goal_pose=%s "
                 "robot_status=%s chassis_mode=%s",
@@ -117,14 +112,12 @@ namespace decision_simple {
   }
 
   // ================= callbacks =================
-  void DecisionSimple::onRobotStatus(
-      const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg) {
+  void DecisionSimple::onRobotStatus(const RobotStatusMsg::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
     environment_->onRobotStatus(ConvertRobotStatus(msg));
   }
 
-  void DecisionSimple::onGameStatus(
-      const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
+  void DecisionSimple::onGameStatus(const GameStatusMsg::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
     environment_->onGameStatus(ConvertGameStatus(msg),
                                this->now().nanoseconds());
@@ -146,15 +139,13 @@ namespace decision_simple {
     }
   }
 
-  void DecisionSimple::onArmors(
-      const auto_aim_interfaces::msg::Armors::SharedPtr msg) {
+  void DecisionSimple::onArmors(const ArmorsMsg::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
 
     environment_->onArmors(ConvertArmors(msg));
   }
 
-  void DecisionSimple::onTarget(
-      const auto_aim_interfaces::msg::Target::SharedPtr msg) {
+  void DecisionSimple::onTarget(const TargetMsg::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
 
     environment_->onTarget(ConvertTarget(msg));
@@ -172,7 +163,11 @@ namespace decision_simple {
       return;
     }
 
-    if (this->getRobotPoseMap({x, y, yaw})) {
+    Pose2D pose{x, y, yaw};
+    if (this->getRobotPoseMap(pose)) {
+      x = pose.x;
+      y = pose.y;
+      yaw = pose.yaw;
       environment_->updatePose(x, y, yaw);
     }
 
@@ -217,9 +212,9 @@ namespace decision_simple {
     }
   }
 
-  geometry_msgs::msg::PoseStamped DecisionSimple::makePoseXYZYaw(
-      const std::string& frame, const Pose2D& position) const {
-    geometry_msgs::msg::PoseStamped p;
+  PoseStampedMsg DecisionSimple::makePoseXYZYaw(const std::string& frame,
+                                                const Pose2D& position) const {
+    PoseStampedMsg p;
     p.header.frame_id = frame;
     p.header.stamp = this->now();
     p.pose.position.x = position.x;
@@ -236,7 +231,7 @@ namespace decision_simple {
   }
 
   // 获取机器人在 map 下的位置
-  bool DecisionSimple::getRobotPoseMap(Pose2D position) {
+  bool DecisionSimple::getRobotPoseMap(Pose2D& position) {
     try {
       const auto tf = tf_buffer_->lookupTransform(frame_id_, base_frame_id_,
                                                   tf2::TimePointZero);
@@ -268,14 +263,13 @@ namespace decision_simple {
   }
 
   void DecisionSimple::publishChassisMode(ChassisMode mode) {
-    std_msgs::msg::UInt8 m;
+    UInt8Msg m;
     m.data = static_cast<uint8_t>(mode);
     chassis_mode_pub_->publish(m);
   }
 
-  void DecisionSimple::publishGoalThrottled(
-      const geometry_msgs::msg::PoseStamped& goal, rclcpp::Time& last_pub,
-      double hz) {
+  void DecisionSimple::publishGoalThrottled(const PoseStampedMsg& goal,
+                                            rclcpp::Time& last_pub, double hz) {
     const double period = (hz <= 1e-6) ? 1e9 : (1.0 / hz);
     const auto now = this->now();
 
@@ -286,8 +280,32 @@ namespace decision_simple {
   }
 
   void DecisionSimple::handleGateLog(Readiness& readiness) {
-    (void)readiness;
-    return;
+    using Status = Readiness::Status;
+    switch (readiness.status) {
+      case Status::NO_RS:
+        RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 2000,
+            "Gate: no robot_status received; withholding decisions");
+        break;
+      case Status::NO_GS:
+        RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 2000,
+            "Gate: no game_status received; waiting for referee");
+        break;
+      case Status::NOT_STARTED:
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
+                             "Gate: match not started yet; decisions disabled");
+        break;
+      case Status::IN_DELAY:
+        RCLCPP_INFO_THROTTLE(
+            this->get_logger(), *this->get_clock(), 2000,
+            "Gate: match started but delaying decisions (elapsed=%.2f s)",
+            readiness.elapsed);
+        break;
+      case Status::READY:
+      default:
+        break;
+    }
   }
 
 }  // namespace decision_simple

@@ -21,17 +21,21 @@
 #include "tf2_ros/transform_listener.h"
 
 namespace decision_simple {
-
+  using RobotStatusMsg = pb_rm_interfaces::msg::RobotStatus;
+  using GameStatusMsg = pb_rm_interfaces::msg::GameStatus;
+  using ArmorsMsg = auto_aim_interfaces::msg::Armors;
+  using TargetMsg = auto_aim_interfaces::msg::Target;
+  using PoseStampedMsg = geometry_msgs::msg::PoseStamped;
+  using UInt8Msg = std_msgs::msg::UInt8;
   class DecisionSimple : public rclcpp::Node {
   public:
     explicit DecisionSimple(const rclcpp::NodeOptions& options);
 
   private:
-    // callbacks
-    void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
-    void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
-    void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
-    void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
+    void onRobotStatus(const RobotStatusMsg::SharedPtr msg);
+    void onGameStatus(const GameStatusMsg::SharedPtr msg);
+    void onArmors(const ArmorsMsg::SharedPtr msg);
+    void onTarget(const TargetMsg::SharedPtr msg);
 
     // tick
     void tick();
@@ -40,15 +44,15 @@ namespace decision_simple {
     Stamp makeStamped(const rclcpp::Time time);
     void executeAction(DecisionAction action);
     void publishGoal(const DecisionAction& action);
-    geometry_msgs::msg::PoseStamped makePoseXYZYaw(
-        const std::string& frame, const Pose2D& position) const;
+    PoseStampedMsg makePoseXYZYaw(const std::string& frame,
+                                  const Pose2D& position) const;
 
     // ====== chassis mode & arrival / attacked helpers ======
 
-    bool getRobotPoseMap(Pose2D position);
+    bool getRobotPoseMap(Pose2D& position);
     void setAndLogState(State s);
     void publishChassisMode(ChassisMode mode);
-    void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
+    void publishGoalThrottled(const PoseStampedMsg& goal,
                               rclcpp::Time& last_pub, double hz);
     void handleGateLog(Readiness& readiness);
 
@@ -77,20 +81,14 @@ namespace decision_simple {
     bool default_spin_latched_{false};
 
     // ===== Publishers & Subscribers =====
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
-        goal_pose_pub_;
-    rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr chassis_mode_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
-        debug_attack_pose_pub_;
+    rclcpp::Publisher<PoseStampedMsg>::SharedPtr goal_pose_pub_;
+    rclcpp::Publisher<UInt8Msg>::SharedPtr chassis_mode_pub_;
+    rclcpp::Publisher<PoseStampedMsg>::SharedPtr debug_attack_pose_pub_;
 
-    rclcpp::Subscription<pb_rm_interfaces::msg::RobotStatus>::SharedPtr
-        robot_status_sub_;
-    rclcpp::Subscription<pb_rm_interfaces::msg::GameStatus>::SharedPtr
-        game_status_sub_;
-    rclcpp::Subscription<auto_aim_interfaces::msg::Armors>::SharedPtr
-        armors_sub_;
-    rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr
-        target_sub_;
+    rclcpp::Subscription<RobotStatusMsg>::SharedPtr robot_status_sub_;
+    rclcpp::Subscription<GameStatusMsg>::SharedPtr game_status_sub_;
+    rclcpp::Subscription<ArmorsMsg>::SharedPtr armors_sub_;
+    rclcpp::Subscription<TargetMsg>::SharedPtr target_sub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
 

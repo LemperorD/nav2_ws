@@ -19,13 +19,13 @@
 #include "types.hpp"
 
 namespace decision_simple {
-  using nanoseconds = int64_t;
 
   struct Readiness {
     enum class Status { READY, NO_RS, NO_GS, NOT_STARTED, IN_DELAY };
     Status status;
     double elapsed = 0.0;  // 仅供 Log 使用
   };
+
   /// Environment state aggregation layer
   /// Translates low-level ROS messages into high-level business facts
   class EnvironmentContext {
@@ -34,18 +34,11 @@ namespace decision_simple {
 
     explicit EnvironmentContext(const ContextConfig& context_config);
 
-    /// Update environment state from robot status
     void onRobotStatus(const RobotStatus& robot_status);
-
-    /// Update environment state from armors
     void onArmors(const Armors& msg);
-
-    /// Update environment state from target
     void onTarget(const Target msg);
-
-    /// Update environment state from game status
     void onGameStatus(const GameStatus msg, int64_t match_start_time_ns);
-    /// Get robot pose in map frame
+
     bool isGameStarted();
     bool isGameOver();
     void resetGameOver();
@@ -66,7 +59,6 @@ namespace decision_simple {
     void setChassisMode(ChassisMode mode);
     Readiness checkReadiness(int64_t now);
     void updatePose(const double x, const double y, const double z);
-    // Check proximity using the internally tracked robot pose (no TF lookup)
     bool isNearRobotPose(double target_x, double target_y,
                          double tolerance) const;
 
@@ -75,26 +67,31 @@ namespace decision_simple {
     bool has_robot_status_{false};
     bool match_started_{false};
     bool has_pose_{false};
-    RobotStatus last_robot_status_{};
     bool has_game_status_{false};
-    int64_t match_start_time_{};
-    bool has_armors_{false};
-    Armors last_armors_{};
-    std::optional<Target> last_target_opt_;
-    uint8_t last_game_status_{0};
     bool default_spin_latched_{false};
     bool is_game_started{false};
     bool is_game_over{false};
     bool is_state_changed{false};
+    bool has_armors_{false};
+    bool require_game_running_{false};
+
+    // Reorder: these fields are initialized in constructor, so order them
+    // before require_game_running_
     int hp_enter_supply_{120};
     int hp_exit_supply_{300};
     int ammo_min_{0};
     double combat_max_distance_{8.0};
-    bool require_game_running_{false};
     double start_delay_sec_{5.0};
-    State state_{State::DEFAULT};
     double attack_hold_sec_{1.5};
     double attacked_hold_sec_{1.5};
+
+    RobotStatus last_robot_status_{};
+    int64_t match_start_time_{};
+    Armors last_armors_{};
+    std::optional<Target> last_target_opt_;
+    State state_{State::DEFAULT};
+    uint8_t last_game_status_{0};
+
     double default_arrive_xy_tol_{0.30};
     double default_spin_keep_xy_tol_{0.80};
 
