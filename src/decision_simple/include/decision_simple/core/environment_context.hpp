@@ -63,6 +63,7 @@ namespace decision_simple {
                          double tolerance) const;
 
   private:
+    const ContextConfig config;
     mutable std::mutex mtx_;
     bool has_robot_status_{false};
     bool match_started_{false};
@@ -73,15 +74,7 @@ namespace decision_simple {
     bool is_game_over{false};
     bool is_state_changed{false};
     bool has_armors_{false};
-    bool require_game_running_{false};
 
-    // Reorder: these fields are initialized in constructor, so order them
-    // before require_game_running_
-    int hp_enter_supply_{120};
-    int hp_exit_supply_{300};
-    int ammo_min_{0};
-    double combat_max_distance_{8.0};
-    double start_delay_sec_{5.0};
     double attack_hold_sec_{1.5};
     double attacked_hold_sec_{1.5};
 
@@ -92,11 +85,6 @@ namespace decision_simple {
     State state_{State::DEFAULT};
     uint8_t last_game_status_{0};
 
-    double default_arrive_xy_tol_{0.30};
-    double default_spin_keep_xy_tol_{0.80};
-
-    double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
-    double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};
     double x_{0.0}, y_{0.0}, yaw_{0.0};
   };
 

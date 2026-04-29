@@ -3,18 +3,7 @@
 namespace decision_simple {
 
   Decision::Decision(const ContextConfig& context_config)
-      : hp_enter_supply_(context_config.hp_enter_supply),
-        hp_exit_supply_(context_config.hp_exit_supply),
-        ammo_min_(context_config.ammo_min),
-        combat_max_distance_(context_config.combat_max_distance),
-        require_game_running_(context_config.require_game_running),
-        start_delay_sec_(context_config.start_delay_sec),
-        supply_x_(context_config.supply_x_),
-        supply_y_(context_config.supply_y_),
-        supply_yaw_(context_config.supply_yaw),
-        default_x_(context_config.default_x_),
-        default_y_(context_config.default_y_),
-        default_yaw_(context_config.default_yaw_) {
+      : config(context_config) {
   }
 
   DecisionAction Decision::compute(const Snapshot& s) {
@@ -22,9 +11,9 @@ namespace decision_simple {
     if (s.state == State::SUPPLY) {
       if (!isStatusRecovered(s.rs)) {
         action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
-        action.target_x = supply_x_;
-        action.target_y = supply_y_;
-        action.target_yaw = supply_yaw_;
+        action.target_x = config.supply_x;
+        action.target_y = config.supply_y;
+        action.target_yaw = config.supply_yaw;
         action.next_state = State::SUPPLY;
         return action;
       }
@@ -32,9 +21,9 @@ namespace decision_simple {
 
     if (isStatusBad(s.rs)) {
       action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
-      action.target_x = supply_x_;
-      action.target_y = supply_y_;
-      action.target_yaw = supply_yaw_;
+      action.target_x = config.supply_x;
+      action.target_y = config.supply_y;
+      action.target_yaw = config.supply_yaw;
       action.next_state = State::SUPPLY;
       return action;
     }
@@ -69,22 +58,22 @@ namespace decision_simple {
         action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
       }
     }
-    action.target_x = supply_x_;
-    action.target_y = supply_y_;
-    action.target_yaw = supply_yaw_;
+    action.target_x = config.supply_x;
+    action.target_y = config.supply_y;
+    action.target_yaw = config.supply_yaw;
     return action;
   }
 
   bool Decision::isStatusRecovered(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp >= hp_exit_supply_) && (ammo > ammo_min_);
+    return (hp >= config.hp_exit_supply) && (ammo > config.ammo_min);
   }
 
   bool Decision::isStatusBad(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
+    return (hp < config.hp_enter_supply) || (ammo <= config.ammo_min);
   }
 
   DecisionAction Decision::computeAction(const Snapshot& snapshot) const {
@@ -96,9 +85,9 @@ namespace decision_simple {
       if (!isStatusRecovered(snapshot.rs)) {
         action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
         action.next_state = State::SUPPLY;
-        action.target_x = supply_x_;
-        action.target_y = supply_y_;
-        action.target_yaw = supply_yaw_;
+        action.target_x = config.supply_x;
+        action.target_y = config.supply_y;
+        action.target_yaw = config.supply_yaw;
         return action;
       }
     }
@@ -107,9 +96,9 @@ namespace decision_simple {
     if (isStatusBad(snapshot.rs)) {
       action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
       action.next_state = State::SUPPLY;
-      action.target_x = supply_x_;
-      action.target_y = supply_y_;
-      action.target_yaw = supply_yaw_;
+      action.target_x = config.supply_x;
+      action.target_y = config.supply_y;
+      action.target_yaw = config.supply_yaw;
       return action;
     }
 
@@ -117,9 +106,9 @@ namespace decision_simple {
     if (snapshot.enemy_recent) {
       action.next_state = State::ATTACK;
       action.default_spin_latched = false;
-      action.target_x = default_x_;
-      action.target_y = default_y_;
-      action.target_yaw = default_yaw_;
+      action.target_x = config.default_x;
+      action.target_y = config.default_y;
+      action.target_yaw = config.default_yaw;
 
       // Compute attack goal (modifies snapshot in-place)
       buildAttackGoal(const_cast<Snapshot&>(snapshot), snapshot.armors,
@@ -142,9 +131,9 @@ namespace decision_simple {
 
     // ================= 4) 默认：去中心点 =================
     action.next_state = State::DEFAULT;
-    action.target_x = default_x_;
-    action.target_y = default_y_;
-    action.target_yaw = default_yaw_;
+    action.target_x = config.default_x;
+    action.target_y = config.default_y;
+    action.target_yaw = config.default_yaw;
 
     // 1. 先进入 0.3m 小圈 -> 小陀螺模式
     if (snapshot.at_center) {

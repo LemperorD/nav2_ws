@@ -3,14 +3,7 @@
 namespace decision_simple {
 
   EnvironmentContext::EnvironmentContext(const ContextConfig& context_config)
-      : require_game_running_(context_config.require_game_running),
-        hp_enter_supply_(context_config.hp_enter_supply),
-        hp_exit_supply_(context_config.hp_exit_supply),
-        ammo_min_(context_config.ammo_min),
-        combat_max_distance_(context_config.combat_max_distance),
-        start_delay_sec_(context_config.start_delay_sec),
-        default_arrive_xy_tol_(context_config.default_arrive_xy_tol),
-        default_spin_keep_xy_tol_(context_config.default_spin_keep_xy_tol) {
+      : config(context_config) {
   }
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
@@ -77,7 +70,7 @@ namespace decision_simple {
       const double y = target_opt->position.y;
       const double z = target_opt->position.z;
       const double dist = std::sqrt(x * x + y * y + z * z);
-      return dist <= combat_max_distance_;
+      return dist <= config.combat_max_distance;
     }
 
     for (const auto& a : armors.armors) {
@@ -85,7 +78,7 @@ namespace decision_simple {
       const double y = a.pose.position.y;
       const double z = a.pose.position.z;
       const double dist = std::sqrt(x * x + y * y + z * z);
-      if (dist <= combat_max_distance_) {
+      if (dist <= config.combat_max_distance) {
         return true;
       }
     }
@@ -135,10 +128,10 @@ namespace decision_simple {
                                 <= attacked_hold_sec_);
 
     snapshot.default_spin_latched = default_spin_latched_;
-    snapshot.at_center = isNearRobotPose(default_x_, default_y_,
-                                         default_arrive_xy_tol_);
-    snapshot.in_center_keep_spin = isNearRobotPose(default_x_, default_y_,
-                                                   default_spin_keep_xy_tol_);
+    snapshot.at_center = isNearRobotPose(config.default_x, config.default_y,
+                                         config.default_arrive_xy_tol);
+    snapshot.in_center_keep_spin = isNearRobotPose(
+        config.default_x, config.default_y, config.default_spin_keep_xy_tol);
 
     return snapshot;
   }
@@ -146,7 +139,7 @@ namespace decision_simple {
   bool EnvironmentContext::isStatusBad(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
+    return (hp < config.hp_enter_supply) || (ammo <= config.ammo_min);
   }
 
   void EnvironmentContext::setState(State s) {
@@ -166,7 +159,7 @@ namespace decision_simple {
     if (!has_robot_status_) {
       return {Readiness::Status::NO_RS};
     }
-    if (require_game_running_) {
+    if (config.require_game_running) {
       if (!has_game_status_) {
         return {Readiness::Status::NO_GS};
       }
@@ -175,7 +168,7 @@ namespace decision_simple {
       }
 
       const double current_elapsed = (now - match_start_time_) * 1e-9;
-      if (current_elapsed < start_delay_sec_) {
+      if (current_elapsed < config.start_delay_sec) {
         return {Readiness::Status::IN_DELAY, current_elapsed};
       }
     }

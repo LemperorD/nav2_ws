@@ -30,14 +30,14 @@ namespace decision_simple {
     double combat_max_distance{8.0};
     bool require_game_running{false};
     double start_delay_sec{5.0};
-    double default_x_{0};
-    double default_y_{0};
-    double default_yaw_{0};
-    double supply_x_{0};
-    double supply_y_{0};
+    double default_x{0};
+    double default_y{0};
+    double default_yaw{0};
+    double supply_x{0};
+    double supply_y{0};
     double supply_yaw{0};
-    double default_arrive_xy_tol{0.0};
-    double default_spin_keep_xy_tol{0.0};
+    double default_arrive_xy_tol{0.30};
+    double default_spin_keep_xy_tol{0.80};
   };
 
   struct DecisionAction {
@@ -139,26 +139,26 @@ namespace decision_simple {
   };
 
   struct Snapshot {
-    RobotStatus rs;
     bool has_rs = false;
     bool has_gs = false;
-    bool match_started = false;
-    Stamp match_start_time;
-    Armors armors;
     bool has_armors = false;
-    std::optional<Target> target_opt;
-    State state{State::DEFAULT};
-    bool enemy{false};
-    Stamp last_enemy_seen_{0, 0};
-    Stamp last_attacked_{0, 0};
+    bool has_attack_goal{false};
+    bool match_started = false;
     bool enemy_recent;
     bool attacked_recent;
     bool at_center{false};
     bool in_center_keep_spin{false};
     bool default_spin_latched{false};
-    Position last_attack_position{0.0, 0.0, 0.0};
+    bool enemy{false};
     double last_attack_yaw{0.0};
-    bool has_attack_goal{false};
+    RobotStatus rs;
+    Stamp match_start_time;
+    Armors armors;
+    std::optional<Target> target_opt;
+    State state{State::DEFAULT};
+    Stamp last_enemy_seen_{0, 0};
+    Stamp last_attacked_{0, 0};
+    Position last_attack_position{0.0, 0.0, 0.0};
   };
 
 }  // namespace decision_simple
