@@ -6,6 +6,7 @@
 
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
+#include "decision_simple/adapter/transform.hpp"
 #include "decision_simple/core/decision.hpp"
 #include "decision_simple/core/environment_context.hpp"
 #include "decision_simple/core/interfaces.hpp"
@@ -28,33 +29,28 @@ namespace decision_simple {
   private:
     // callbacks
     void onRobotStatus(const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg);
+    void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
     void onArmors(const auto_aim_interfaces::msg::Armors::SharedPtr msg);
     void onTarget(const auto_aim_interfaces::msg::Target::SharedPtr msg);
-    void onGameStatus(const pb_rm_interfaces::msg::GameStatus::SharedPtr msg);
 
     // tick
     void tick();
 
     // helpers
-    geometry_msgs::msg::PoseStamped makePoseXYZYaw(const std::string& frame,
-                                                   double x, double y,
-                                                   double yaw) const;
-
-    bool buildSupplyGoal(geometry_msgs::msg::PoseStamped& out,
-                         const RobotStatus& status) const;
-    void handleGateLog(Readiness& readiness);
+    Stamp makeStamped(const rclcpp::Time time);
+    void executeAction(DecisionAction action);
+    void publishGoal(const DecisionAction& action);
+    geometry_msgs::msg::PoseStamped makePoseXYZYaw(
+        const std::string& frame, const Pose2D& position) const;
 
     // ====== chassis mode & arrival / attacked helpers ======
-    void publishGoal(const DecisionAction& action);
 
-    bool getRobotPoseMap(double& x, double& y, double& yaw);
-
+    bool getRobotPoseMap(Pose2D position);
     void setAndLogState(State s);
-
     void publishChassisMode(ChassisMode mode);
-
     void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
                               rclcpp::Time& last_pub, double hz);
+    void handleGateLog(Readiness& readiness);
 
     // ===== Parameters =====
     std::string frame_id_{"map"};
@@ -65,34 +61,20 @@ namespace decision_simple {
     std::string chassis_mode_topic_{"chassis_mode"};
     std::string debug_attack_pose_topic_{"debug_attack_pose"};
     std::string game_status_topic_{"referee/game_status"};
-
     std::string detector_armors_topic_{"detector/armors"};
     std::string tracker_target_topic_{"tracker/target"};
 
-    double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
-    double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};
+    // supply/default coordinates are provided to ContextConfig; node keeps
 
-    double default_arrive_xy_tol_{0.30};
-    double supply_arrive_xy_tol_{0.30};
-
-    int hp_enter_supply_{120};
-    int hp_exit_supply_{300};
-    int ammo_min_{0};
-
-    double combat_max_distance_{8.0};
-    double attack_hold_sec_{1.0};
-    double attacked_hold_sec_{1.5};
+    // Health/combat config moved to ContextConfig (not stored as node members)
 
     double tick_hz_{20.0};
     double default_goal_hz_{2.0};
     double supply_goal_hz_{2.0};
     double attack_goal_hz_{10.0};
-
-    double default_spin_keep_xy_tol_{0.80};
-    bool default_spin_latched_{false};
-
-    bool require_game_running_{false};
     double start_delay_sec_{5.0};
+
+    bool default_spin_latched_{false};
 
     // ===== Publishers & Subscribers =====
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr
@@ -125,10 +107,9 @@ namespace decision_simple {
     rclcpp::Time last_default_pub_{0, 0, RCL_ROS_TIME};
     rclcpp::Time last_supply_pub_{0, 0, RCL_ROS_TIME};
     rclcpp::Time last_attack_pub_{0, 0, RCL_ROS_TIME};
-
     rclcpp::Time last_enemy_seen_{0, 0, RCL_ROS_TIME};
+
     geometry_msgs::msg::PoseStamped last_attack_goal_{};
-    bool has_last_attack_goal_{false};
 
     std::unique_ptr<EnvironmentContext> environment_;
     std::unique_ptr<Decision> controller_;

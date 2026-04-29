@@ -16,6 +16,7 @@ namespace decision_simple {
         default_y_(context_config.default_y_),
         default_yaw_(context_config.default_yaw_) {
   }
+
   DecisionAction Decision::compute(const Snapshot& s) {
     DecisionAction action;
     if (s.state == State::SUPPLY) {

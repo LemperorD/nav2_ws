@@ -1,42 +1,9 @@
-// ============================
-// Black-box Behavior Spec (for TDD)
-// ============================
-// Inputs:
-// - referee/game_status: game_progress
-// - referee/robot_status: current_hp, projectile_allowance_17mm, is_hp_deduced
-// - (optional) enemy topics: detector/armors, tracker/target
-//
-// Outputs:
-// - chassis_mode: default 1
-// - goal_pose: default default_point
-//
-// Global gate:
-// 1) If robot_status has not been received, do not publish decision outputs.
-// 2) If require_game_running=true, decisions are enabled only when
-//    game_progress == RUNNING and start_delay_sec has elapsed.
-//
-// Priority (high -> low):
-// 1) Supply-first:
-//    - If hp below enter threshold OR ammo below threshold, enter SUPPLY.
-
 #include "decision_simple/node/decision_simple.hpp"
-
-#include <algorithm>
-#include <cmath>
-
-#include "decision_simple/adapter/transform.hpp"
-#include "pb_rm_interfaces/msg/game_status.hpp"
-#include "std_msgs/msg/u_int8.hpp"
-#include "tf2/LinearMath/Quaternion.h"
-#include "tf2/exceptions.h"
-#include "tf2/utils.h"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 namespace decision_simple {
   using nanoseconds = int64_t;
 
   DecisionSimple::DecisionSimple(const rclcpp::NodeOptions& options)
       : Node("decision_simple", options) {
-    // ===== params =====
     frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
     base_frame_id_ = this->declare_parameter<std::string>("base_frame_id",
                                                           "base_footprint");
@@ -45,73 +12,61 @@ namespace decision_simple {
         "referee_robot_status_topic", "referee/robot_status");
     goal_pose_topic_ = this->declare_parameter<std::string>("goal_pose_topic",
                                                             "goal_pose");
-
     chassis_mode_topic_ = this->declare_parameter<std::string>(
         "chassis_mode_topic", "chassis_mode");
     debug_attack_pose_topic_ = this->declare_parameter<std::string>(
         "debug_attack_pose_topic", "debug_attack_pose");
     game_status_topic_ = this->declare_parameter<std::string>(
         "referee_game_status_topic", "referee/game_status");
-    require_game_running_ = this->declare_parameter<bool>(
-        "require_game_running", true);
-    start_delay_sec_ = this->declare_parameter<double>("start_delay_sec", 5.0);
-    default_spin_keep_xy_tol_ = this->declare_parameter<double>(
-        "default_spin_keep_xy_tol", 0.80);
     detector_armors_topic_ = this->declare_parameter<std::string>(
         "detector_armors_topic", "detector/armors");
     tracker_target_topic_ = this->declare_parameter<std::string>(
         "tracker_target_topic", "tracker/target");
 
-    supply_x_ = this->declare_parameter<double>("supply_x", 0.0);
-    supply_y_ = this->declare_parameter<double>("supply_y", 0.0);
-    supply_yaw_ = this->declare_parameter<double>("supply_yaw", 0.0);
-
-    default_x_ = this->declare_parameter<double>("default_x", 2.0);
-    default_y_ = this->declare_parameter<double>("default_y", 0.5);
-    default_yaw_ = this->declare_parameter<double>("default_yaw", 0.0);
-
-    default_arrive_xy_tol_ = this->declare_parameter<double>(
+    const bool require_game_running = this->declare_parameter<bool>(
+        "require_game_running", true);
+    const double start_delay_sec = this->declare_parameter<double>(
+        "start_delay_sec", 5.0);
+    const double default_spin_keep_xy_tol_ = this->declare_parameter<double>(
+        "default_spin_keep_xy_tol", 0.80);
+    const double supply_x = this->declare_parameter<double>("supply_x", 0.0);
+    const double supply_y = this->declare_parameter<double>("supply_y", 0.0);
+    const double supply_yaw = this->declare_parameter<double>("supply_yaw",
+                                                              0.0);
+    const double default_x_ = this->declare_parameter<double>("default_x", 2.0);
+    const double default_y_ = this->declare_parameter<double>("default_y", 0.5);
+    const double default_yaw_ = this->declare_parameter<double>("default_yaw",
+                                                                0.0);
+    const double default_arrive_xy_tol_ = this->declare_parameter<double>(
         "default_arrive_xy_tol", 0.30);
-    supply_arrive_xy_tol_ = this->declare_parameter<double>(
-        "supply_arrive_xy_tol", 0.30);
-
-    hp_enter_supply_ = this->declare_parameter<int>("hp_survival_enter", 120);
-    hp_exit_supply_ = this->declare_parameter<int>("hp_survival_exit", 300);
-    ammo_min_ = this->declare_parameter<int>("ammo_min", 0);
-
-    combat_max_distance_ = this->declare_parameter<double>(
+    const int hp_enter_supply = this->declare_parameter<int>(
+        "hp_survival_enter", 120);
+    const int hp_exit_supply = this->declare_parameter<int>("hp_survival_exit",
+                                                            300);
+    const int ammo_min = this->declare_parameter<int>("ammo_min", 0);
+    const double combat_max_distance = this->declare_parameter<double>(
         "combat_max_distance", 8.0);
-    attack_hold_sec_ = this->declare_parameter<double>("combat_cooldown_sec",
-                                                       1.0);
 
-    attacked_hold_sec_ = this->declare_parameter<double>("attacked_hold_sec",
-                                                         1.5);
-
-    tick_hz_ = this->declare_parameter<double>("tick_hz", 20.0);
-    default_goal_hz_ = this->declare_parameter<double>("default_goal_hz", 2.0);
-    supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
-    attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
-
-    const ContextConfig context_config{hp_enter_supply_,
-                                       hp_exit_supply_,
-                                       ammo_min_,
-                                       combat_max_distance_,
-                                       require_game_running_,
-                                       start_delay_sec_,
+    const ContextConfig context_config{hp_enter_supply,
+                                       hp_exit_supply,
+                                       ammo_min,
+                                       combat_max_distance,
+                                       require_game_running,
+                                       start_delay_sec,
                                        default_x_,
                                        default_y_,
                                        default_yaw_,
-                                       supply_x_,
-                                       supply_y_,
-                                       supply_yaw_};
+                                       supply_x,
+                                       supply_y,
+                                       supply_yaw,
+                                       default_arrive_xy_tol_,
+                                       default_spin_keep_xy_tol_};
     environment_ = std::make_unique<EnvironmentContext>(context_config);
     controller_ = std::make_unique<Decision>(context_config);
 
-    // ===== TF init =====
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-    // ===== pubs =====
     goal_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
         goal_pose_topic_, rclcpp::SensorDataQoS());
     chassis_mode_pub_ = this->create_publisher<std_msgs::msg::UInt8>(
@@ -120,7 +75,6 @@ namespace decision_simple {
         this->create_publisher<geometry_msgs::msg::PoseStamped>(
             debug_attack_pose_topic_, rclcpp::QoS(10));
 
-    // ===== subs =====
     robot_status_sub_ =
         this->create_subscription<pb_rm_interfaces::msg::RobotStatus>(
             robot_status_topic_, rclcpp::QoS(10),
@@ -141,7 +95,6 @@ namespace decision_simple {
 
     // init
     setAndLogState(State::DEFAULT);
-
     publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
     // timer
@@ -150,6 +103,11 @@ namespace decision_simple {
         std::chrono::duration<double>(1.0 / hz));
     timer_ = this->create_wall_timer(period,
                                      std::bind(&DecisionSimple::tick, this));
+
+    tick_hz_ = this->declare_parameter<double>("tick_hz", 20.0);
+    default_goal_hz_ = this->declare_parameter<double>("default_goal_hz", 2.0);
+    supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
+    attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
 
     RCLCPP_INFO(this->get_logger(),
                 "decision_simple(min+mode) started. ns=%s goal_pose=%s "
@@ -204,10 +162,9 @@ namespace decision_simple {
 
   void DecisionSimple::tick() {
     // snapshot
-    double x, y, yaw;
+    double x{}, y{}, yaw{};
     const auto now = this->now();
-    Stamp stamp{static_cast<int32_t>(now.seconds()),
-                static_cast<uint32_t>(now.nanoseconds() % 1000000000UL)};
+
     auto readiness = environment_->checkReadiness(now.nanoseconds());
 
     if (readiness.status != Readiness::Status::READY) {
@@ -215,19 +172,24 @@ namespace decision_simple {
       return;
     }
 
-    if (this->getRobotPoseMap(x, y, yaw)) {
+    if (this->getRobotPoseMap({x, y, yaw})) {
       environment_->updatePose(x, y, yaw);
     }
 
-    Snapshot snapshot = environment_->getSnapshot(stamp);
-    snapshot.at_center = environment_->isNear(default_x_, default_y_,
-                                              default_arrive_xy_tol_);
-    snapshot.in_center_keep_spin = environment_->isNear(
-        default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
+    Snapshot snapshot = environment_->getSnapshot(makeStamped(now));
 
     auto action = controller_->computeAction(snapshot);
 
-    // Apply action: update state and publish
+    executeAction(action);
+  }
+
+  Stamp DecisionSimple::makeStamped(const rclcpp::Time time) {
+    Stamp stamp{static_cast<int32_t>(time.seconds()),
+                static_cast<uint32_t>(time.nanoseconds() % 1000000000UL)};
+    return stamp;
+  }
+
+  void DecisionSimple::executeAction(DecisionAction action) {
     setAndLogState(action.next_state);
     publishChassisMode(action.chassis_mode);
 
@@ -237,8 +199,8 @@ namespace decision_simple {
   }
 
   void DecisionSimple::publishGoal(const DecisionAction& action) {
-    const auto goal = makePoseXYZYaw(frame_id_, action.target_x,
-                                     action.target_y, action.target_yaw);
+    const auto goal = makePoseXYZYaw(
+        frame_id_, {action.target_x, action.target_y, action.target_yaw});
 
     // For attack state, also publish debug pose
     if (action.next_state == State::ATTACK) {
@@ -254,30 +216,38 @@ namespace decision_simple {
       publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
     }
   }
-  // ================= helpers =================
+
   geometry_msgs::msg::PoseStamped DecisionSimple::makePoseXYZYaw(
-      const std::string& frame, double x, double y, double yaw) const {
+      const std::string& frame, const Pose2D& position) const {
     geometry_msgs::msg::PoseStamped p;
     p.header.frame_id = frame;
     p.header.stamp = this->now();
-    p.pose.position.x = x;
-    p.pose.position.y = y;
+    p.pose.position.x = position.x;
+    p.pose.position.y = position.y;
     p.pose.position.z = 0.0;
 
     tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, yaw);
-    p.pose.orientation = tf2::toMsg(q);
+    q.setRPY(0.0, 0.0, position.yaw);
+    p.pose.orientation.x = q.x();
+    p.pose.orientation.y = q.y();
+    p.pose.orientation.z = q.z();
+    p.pose.orientation.w = q.w();
     return p;
   }
 
   // 获取机器人在 map 下的位置
-  bool DecisionSimple::getRobotPoseMap(double& x, double& y, double& yaw) {
+  bool DecisionSimple::getRobotPoseMap(Pose2D position) {
     try {
       const auto tf = tf_buffer_->lookupTransform(frame_id_, base_frame_id_,
                                                   tf2::TimePointZero);
-      x = tf.transform.translation.x;
-      y = tf.transform.translation.y;
-      yaw = tf2::getYaw(tf.transform.rotation);
+      position.x = tf.transform.translation.x;
+      position.y = tf.transform.translation.y;
+      const double qx = tf.transform.rotation.x;
+      const double qy = tf.transform.rotation.y;
+      const double qz = tf.transform.rotation.z;
+      const double qw = tf.transform.rotation.w;
+      position.yaw = std::atan2(2.0 * (qw * qz + qx * qy),
+                                1.0 - 2.0 * (qy * qy + qz * qz));
       return true;
     } catch (const tf2::TransformException& ex) {
       RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,

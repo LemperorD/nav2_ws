@@ -37,6 +37,8 @@ namespace decision_simple {
     double supply_x_{0};
     double supply_y_{0};
     double supply_yaw{0};
+    double default_arrive_xy_tol{0.0};
+    double default_spin_keep_xy_tol{0.0};
   };
   struct DecisionAction {
     State next_state;
@@ -60,7 +62,12 @@ namespace decision_simple {
     double y = 0.0;
     double z = 0.0;
   };
-  /// 3D pose with position and orientation
+
+  struct Pose2D {
+    double x;
+    double y;
+    double yaw;
+  };
   struct Pose3D {
     /// Position coordinates
     Position position;

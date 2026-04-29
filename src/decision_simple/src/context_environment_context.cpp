@@ -8,7 +8,9 @@ namespace decision_simple {
         ammo_min_(context_config.ammo_min),
         combat_max_distance_(context_config.combat_max_distance),
         require_game_running_(context_config.require_game_running),
-        start_delay_sec_(context_config.start_delay_sec) {
+        start_delay_sec_(context_config.start_delay_sec),
+        default_arrive_xy_tol_(context_config.default_arrive_xy_tol),
+        default_spin_keep_xy_tol_(context_config.default_spin_keep_xy_tol) {
   }
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
@@ -133,6 +135,11 @@ namespace decision_simple {
                                 <= attacked_hold_sec_);
 
     snapshot.default_spin_latched = default_spin_latched_;
+    snapshot.at_center = isNearRobotPose(default_x_, default_y_,
+                                         default_arrive_xy_tol_);
+    snapshot.in_center_keep_spin = isNearRobotPose(default_x_, default_y_,
+                                                   default_spin_keep_xy_tol_);
+
     return snapshot;
   }
 
@@ -185,8 +192,8 @@ namespace decision_simple {
     has_pose_ = true;
   }
 
-  bool EnvironmentContext::isNear(double target_x, double target_y,
-                                  double tolerance) const {
+  bool EnvironmentContext::isNearRobotPose(double target_x, double target_y,
+                                           double tolerance) const {
     if (!has_pose_) {
       return false;
     }
