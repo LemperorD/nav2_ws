@@ -113,7 +113,7 @@ namespace decision_simple {
     bool has_rs = false;
     bool has_gs = false;
     bool match_started = false;
-    std::chrono::nanoseconds match_start_time;
+    Stamp match_start_time;
     Armors armors;
     bool has_armors = false;
     std::optional<Target> target_opt;

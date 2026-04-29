@@ -36,9 +36,12 @@ namespace decision_simple {
     void onTarget(const Target msg);
 
     /// Update environment state from game status
-    void onGameStatus(const GameStatus msg);
-
+    void onGameStatus(const GameStatus msg, int64_t match_start_time_ns);
     /// Get robot pose in map frame
+    bool isGameStarted();
+    bool isGameOver();
+    void resetGameOver();
+
     bool getRobotPoseMap(double& x, double& y, double& yaw);
 
     /// Check if robot is near target position
@@ -57,19 +60,22 @@ namespace decision_simple {
     void publishGoalThrottled(const geometry_msgs::msg::PoseStamped& goal,
                               rclcpp::Time& last_pub, double hz);
 
-    void tickForContext();
+    void tickForContext(Snapshot& snapshot);
 
   private:
     mutable std::mutex mtx_;
     bool has_robot_status_{false};
+    bool match_started_;
     RobotStatus last_robot_status_{};
     bool has_game_status_{false};
-    bool match_started_{false};
-    std::chrono::nanoseconds match_start_time_{};
+    int64_t match_start_time_{};
     bool has_armors_{false};
     Armors last_armors_{};
     std::optional<Target> last_target_opt_;
     uint8_t last_game_status_{0};
+    bool default_spin_latched_{false};
+    bool is_game_started{false};
+    bool is_game_over{false};
   };
 
 }  // namespace decision_simple

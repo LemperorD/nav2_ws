@@ -150,39 +150,29 @@ namespace decision_simple {
     std::lock_guard<std::mutex> lk(mtx_);
 
     environment_->onRobotStatus(ConvertRobotStatus(msg));
-
-    last_robot_status_ = ConvertRobotStatus(msg);
-    has_robot_status_ = true;
   }
 
   void DecisionSimple::onGameStatus(
       const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
 
-    environment_->onGameStatus(ConvertGameStatus(msg));
-
-    const uint8_t prev = last_game_status_;
-    last_game_status_ = msg->game_progress;
-    has_game_status_ = true;
+    environment_->onGameStatus(ConvertGameStatus(msg),
+                               this->now().nanoseconds());
 
     // 从“非比赛中” -> “比赛中(4)”，开始新一轮倒计时
-    if (prev != 4 && last_game_status_ == 4) {
-      match_started_ = true;
-      match_start_time_ = this->now();
+    if (environment_->isGameStarted()) {
       RCLCPP_INFO(this->get_logger(),
                   "Game started detected, delaying decision for %.1f seconds",
                   start_delay_sec_);
     }
 
     // 从“比赛中(4)” -> “非比赛中”，复位，为下一局做准备
-    if (prev == 4 && last_game_status_ != 4) {
-      match_started_ = false;
-      match_start_time_ = rclcpp::Time(0, 0,
-                                       this->get_clock()->get_clock_type());
+    if (environment_->isGameOver()) {
       // 清掉上一局遗留的默认点小陀螺锁存
       default_spin_latched_ = false;
       RCLCPP_INFO(this->get_logger(),
                   "Game left running state, reset match-start gate.");
+      environment_->resetGameOver();
     }
   }
 
@@ -209,33 +199,10 @@ namespace decision_simple {
     // snapshot
 
     Snapshot snapshot;
-    void tickForContext();
-    RobotStatus rs;
-    bool has_rs = false;
-    bool has_gs = false;
-    bool match_started = false;
-    rclcpp::Time match_start_time;
-    Armors armors;
-    bool has_armors = false;
-    std::optional<Target> target_opt;
 
-    {
-      std::lock_guard<std::mutex> lk(mtx_);
-      has_rs = has_robot_status_;
-      if (has_rs) {
-        rs = last_robot_status_;
-      }
-      has_gs = has_game_status_;
-      match_started = match_started_;
-      match_start_time = match_start_time_;
-      has_armors = has_armors_;
-      if (has_armors) {
-        armors = last_armors_;
-      }
-      target_opt = last_target_opt_;
-    }
+    environment_->tickForContext(snapshot);
 
-    if (!has_rs) {
+    if (!snapshot.has_rs) {
       RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                             "Waiting for robot_status...");
       return;
@@ -244,19 +211,22 @@ namespace decision_simple {
     const auto now = this->now();
     // 比赛开始+5s延时
     if (require_game_running_) {
-      if (!has_gs) {
+      if (!snapshot.has_gs) {
         RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                               "Waiting for game_status...");
         return;
       }
 
-      if (!match_started) {
+      if (!snapshot.match_started) {
         RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                               "Waiting for match start (game_status == 4)...");
         return;
       }
 
-      const double elapsed = (now - match_start_time).seconds();
+      const int64_t match_start_ns =
+          static_cast<int64_t>(snapshot.match_start_time.sec) * 1000000000LL
+          + snapshot.match_start_time.nanosec;
+      const double elapsed = (now.nanoseconds() - match_start_ns) * 1e-9;
       if (elapsed < start_delay_sec_) {
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                              "Match started, delaying decision: %.1f / %.1f s",
@@ -266,7 +236,7 @@ namespace decision_simple {
     }
 
     // 受到攻击检测
-    if (rs.is_hp_deduced) {
+    if (snapshot.rs.is_hp_deduced) {
       last_attacked_ = now;
     }
     const bool attacked_recent = (last_attacked_.nanoseconds() != 0)
@@ -281,7 +251,7 @@ namespace decision_simple {
 
     // ================= 1) 补给保持 =================
     if (state_ == State::SUPPLY) {
-      if (!isStatusRecovered(rs)) {
+      if (!isStatusRecovered(snapshot.rs)) {
         setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
         const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
@@ -292,7 +262,7 @@ namespace decision_simple {
     }
 
     // ================= 2) 状态差 -> 进补给 =================
-    if (isStatusBad(rs)) {
+    if (isStatusBad(snapshot.rs)) {
       setState(State::SUPPLY);
 
       setChassisMode(ChassisMode::CHASSIS_FOLLOWED);
@@ -305,8 +275,8 @@ namespace decision_simple {
 
     // ================= 3) 状态好 -> 有敌攻击 =================
     bool enemy = false;
-    if (has_armors || target_opt.has_value()) {
-      enemy = detectEnemy(armors, target_opt);
+    if (snapshot.has_armors || snapshot.target_opt.has_value()) {
+      enemy = detectEnemy(snapshot.armors, snapshot.target_opt);
     }
     if (enemy) {
       last_enemy_seen_ = now;
@@ -326,7 +296,7 @@ namespace decision_simple {
       }
 
       geometry_msgs::msg::PoseStamped attack_goal;
-      if (buildAttackGoal(attack_goal, armors, target_opt)) {
+      if (buildAttackGoal(attack_goal, snapshot.armors, snapshot.target_opt)) {
         last_attack_goal_ = attack_goal;
         has_last_attack_goal_ = true;
         debug_attack_pose_pub_->publish(attack_goal);

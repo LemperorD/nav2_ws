@@ -9,8 +9,41 @@ namespace decision_simple {
     has_robot_status_ = true;
   }
 
-  // it is not work
-  void EnvironmentContext::onGameStatus(const GameStatus game_status) {
+  void EnvironmentContext::onGameStatus(const GameStatus game_status,
+                                        int64_t match_start_time_ns) {
+    std::lock_guard<std::mutex> lk(mtx_);
+
+    const uint8_t prev = last_game_status_;
+    last_game_status_ = game_status.game_progress;
+    has_game_status_ = true;
+
+    if (prev != 4 && last_game_status_ == 4) {
+      match_started_ = true;
+      match_start_time_ = match_start_time_ns;
+      is_game_started = true;
+    }
+
+    // 从“比赛中(4)” -> “非比赛中”，复位，为下一局做准备
+    if (prev == 4 && last_game_status_ != 4) {
+      match_started_ = false;
+      match_start_time_ = 0;
+      // 清掉上一局遗留的默认点小陀螺锁存
+      default_spin_latched_ = false;
+      is_game_started = false;
+      is_game_over = true;
+    }
+  }
+
+  bool EnvironmentContext::isGameStarted() {
+    return is_game_started;
+  }
+
+  bool EnvironmentContext::isGameOver() {
+    return is_game_over;
+  }
+
+  void EnvironmentContext::resetGameOver() {
+    is_game_over = false;
   }
 
   void EnvironmentContext::onArmors(const Armors& armors) {
@@ -54,23 +87,21 @@ namespace decision_simple {
     // TODO: Implement throttled goal publishing
   }
 
-  void EnvironmentContext::tickForContext() {
-    Snapshot snapshot;
-
-    {
-      std::lock_guard<std::mutex> lk(mtx_);
-      snapshot.has_rs = has_robot_status_;
-      if (snapshot.has_rs) {
-        snapshot.rs = last_robot_status_;
-      }
-      snapshot.has_gs = has_game_status_;
-      snapshot.match_started = match_started_;
-      snapshot.match_start_time = match_start_time_;
-      snapshot.has_armors = has_armors_;
-      if (snapshot.has_armors) {
-        snapshot.armors = last_armors_;
-      }
-      snapshot.target_opt = last_target_opt_;
+  void EnvironmentContext::tickForContext(Snapshot& snapshot) {
+    snapshot.has_rs = has_robot_status_;
+    if (snapshot.has_rs) {
+      snapshot.rs = last_robot_status_;
     }
+    snapshot.has_gs = has_game_status_;
+    snapshot.match_started = match_started_;
+    snapshot.match_start_time.sec = static_cast<int32_t>(match_start_time_
+                                                         / 1000000000LL);
+    snapshot.match_start_time.nanosec = static_cast<uint32_t>(match_start_time_
+                                                              % 1000000000LL);
+    snapshot.has_armors = has_armors_;
+    if (snapshot.has_armors) {
+      snapshot.armors = last_armors_;
+    }
+    snapshot.target_opt = last_target_opt_;
   }
 }  // namespace decision_simple
