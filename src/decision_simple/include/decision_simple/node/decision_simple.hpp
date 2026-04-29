@@ -6,6 +6,7 @@
 
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
+#include "decision_simple/core/decision.hpp"
 #include "decision_simple/core/environment_context.hpp"
 #include "decision_simple/core/interfaces.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -131,9 +132,8 @@ namespace decision_simple {
     geometry_msgs::msg::PoseStamped last_attack_goal_{};
     bool has_last_attack_goal_{false};
 
-    rclcpp::Time last_attacked_{0, 0, RCL_ROS_TIME};
-
     std::unique_ptr<EnvironmentContext> environment_;
+    std::unique_ptr<Decision> controller_;
   };
 
 }  // namespace decision_simple

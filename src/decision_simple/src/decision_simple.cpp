@@ -105,6 +105,7 @@ namespace decision_simple {
                                        supply_y_,
                                        supply_yaw_};
     environment_ = std::make_unique<EnvironmentContext>(context_config);
+    controller_ = std::make_unique<Decision>(context_config);
 
     // ===== TF init =====
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -206,10 +207,10 @@ namespace decision_simple {
   void DecisionSimple::tick() {
     // snapshot
     const auto now = this->now();
+    Stamp stamp{static_cast<int32_t>(now.seconds()),
+                static_cast<uint32_t>(now.nanoseconds() % 1000000000UL)};
 
-    Snapshot snapshot;
     auto readiness = environment_->checkReadiness(now.nanoseconds());
-    environment_->tickForContext(snapshot);
 
     if (readiness.status != Readiness::Status::READY) {
       handleGateLog(readiness);
@@ -223,24 +224,34 @@ namespace decision_simple {
 
     const bool at_center = environment_->isNear(default_x_, default_y_,
                                                 default_arrive_xy_tol_);
-    const bool at_supply = environment_->isNear(supply_x_, supply_y_,
-                                                supply_arrive_xy_tol_);
     const bool in_center_keep_spin = environment_->isNear(
         default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
+    Snapshot snapshot = environment_->getSnapshot(stamp);
+
+    const int64_t last_enemy_ns =
+        (static_cast<int64_t>(snapshot.last_enemy_seen_.sec) * 1000000000LL)
+        + snapshot.last_enemy_seen_.nanosec;
+    const bool enemy_recent = (last_enemy_ns != 0)
+                           && ((now.nanoseconds() - last_enemy_ns) * 1e-9
+                               <= attack_hold_sec_);
+
     // 受到攻击检测
     if (snapshot.rs.is_hp_deduced) {
-      last_attacked_ = now;
+      snapshot.last_attacked_ = stamp;
     }
-    const bool attacked_recent = (last_attacked_.nanoseconds() != 0)
-                              && ((now - last_attacked_).seconds()
+    const int64_t last_attacked_ns =
+        (static_cast<int64_t>(snapshot.last_attacked_.sec) * 1000000000LL)
+        + snapshot.last_attacked_.nanosec;
+    const bool attacked_recent = (last_attacked_ns != 0)
+                              && ((now.nanoseconds() - last_attacked_ns) * 1e-9
                                   <= attacked_hold_sec_);
 
     // 到达判断（中心点/补给点）
 
     // ================= 1) 补给保持 =================
-    if (environment_->state_ == State::SUPPLY) {
-      if (!environment_->isStatusRecovered(snapshot.rs)) {
+    if (snapshot.state == State::SUPPLY) {
+      if (!controller_->isStatusRecovered(snapshot.rs)) {
         publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
         const auto goal = makePoseXYZYaw(frame_id_, supply_x_, supply_y_,
@@ -263,17 +274,6 @@ namespace decision_simple {
     }
 
     // ================= 3) 状态好 -> 有敌攻击 =================
-    bool enemy = false;
-    if (snapshot.has_armors || snapshot.target_opt.has_value()) {
-      enemy = environment_->detectEnemy(snapshot.armors, snapshot.target_opt);
-    }
-    if (enemy) {
-      last_enemy_seen_ = now;
-    }
-
-    const bool enemy_recent = (last_enemy_seen_.nanoseconds() != 0)
-                           && ((now - last_enemy_seen_).seconds()
-                               <= attack_hold_sec_);
 
     if (enemy_recent) {
       setAndLogState(State::ATTACK);

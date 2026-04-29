@@ -10,7 +10,43 @@
 
 namespace decision_simple {
 
-  /// 3D quaternion (for rotation representation)
+  /// Chassis movement mode
+  enum class ChassisMode : uint8_t {
+    CHASSIS_FOLLOWED = 1,  ///< 底盘跟随云台
+    LITTLE_TES = 2,        ///< 小陀螺
+    GO_HOME = 3,           ///< 回家
+  };
+
+  /// Robot behavior state
+  enum class State : uint8_t {
+    DEFAULT = 1,  ///< 默认状态
+    ATTACK = 2,   ///< 攻击状态
+    SUPPLY = 3,   ///< 补给状态
+  };
+
+  struct ContextConfig {
+    int hp_enter_supply{120};
+    int hp_exit_supply{300};
+    int ammo_min{0};
+    double combat_max_distance{8.0};
+    bool require_game_running{false};
+    double start_delay_sec{5.0};
+    double default_x_{0};
+    double default_y_{0};
+    double default_yaw_{0};
+    double supply_x_{0};
+    double supply_y_{0};
+    double supply_yaw{0};
+  };
+  struct DecisionAction {
+    State next_state;
+    ChassisMode chassis_mode;
+    double target_x;
+    double target_y;
+    double target_yaw;
+    bool should_publish_goal;
+  };
+
   struct Quaternion {
     double x = 0.0;
     double y = 0.0;
@@ -117,6 +153,10 @@ namespace decision_simple {
     Armors armors;
     bool has_armors = false;
     std::optional<Target> target_opt;
+    State state{State::DEFAULT};
+    bool enemy{false};
+    Stamp last_enemy_seen_{0, 0};
+    Stamp last_attacked_{0, 0};
   };
 
   // Type aliases for smart pointers

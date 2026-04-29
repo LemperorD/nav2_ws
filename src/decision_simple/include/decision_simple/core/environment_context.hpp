@@ -20,20 +20,6 @@
 
 namespace decision_simple {
   using nanoseconds = int64_t;
-  struct ContextConfig {
-    int hp_enter_supply{120};
-    int hp_exit_supply{300};
-    int ammo_min{0};
-    double combat_max_distance{8.0};
-    bool require_game_running{false};
-    double start_delay_sec{5.0};
-    double default_x_{0};
-    double default_y_{0};
-    double default_yaw_{0};
-    double supply_x_{0};
-    double supply_y_{0};
-    double supply_yaw{0};
-  };
 
   struct Readiness {
     enum class Status { READY, NO_RS, NO_GS, NOT_STARTED, IN_DELAY };
@@ -66,7 +52,7 @@ namespace decision_simple {
 
     bool getRobotPoseMap(double& x, double& y, double& yaw);
 
-    void tickForContext(Snapshot& snapshot);
+    Snapshot getSnapshot(Stamp now);
 
     bool isStatusBad(const RobotStatus& rs) const;
     bool isStatusRecovered(const RobotStatus& rs) const;
@@ -81,8 +67,6 @@ namespace decision_simple {
     Readiness checkReadiness(int64_t now);
     void updatePose(const double x, const double y, const double z);
     bool isNear(double target_x, double target_y, double tolerance) const;
-
-    State state_{State::DEFAULT};
 
   private:
     mutable std::mutex mtx_;
@@ -106,6 +90,7 @@ namespace decision_simple {
     double combat_max_distance_{8.0};
     bool require_game_running_{false};
     double start_delay_sec_{5.0};
+    State state_{State::DEFAULT};
 
     double supply_x_{0.0}, supply_y_{0.0}, supply_yaw_{0.0};
     double default_x_{1.0}, default_y_{0.0}, default_yaw_{0.0};

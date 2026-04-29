@@ -90,7 +90,8 @@ namespace decision_simple {
     return false;
   }
 
-  void EnvironmentContext::tickForContext(Snapshot& snapshot) {
+  Snapshot EnvironmentContext::getSnapshot(Stamp now) {
+    Snapshot snapshot;
     snapshot.has_rs = has_robot_status_;
     if (snapshot.has_rs) {
       snapshot.rs = last_robot_status_;
@@ -102,22 +103,25 @@ namespace decision_simple {
     snapshot.match_start_time.nanosec = static_cast<uint32_t>(match_start_time_
                                                               % 1000000000LL);
     snapshot.has_armors = has_armors_;
+    snapshot.state = state_;
     if (snapshot.has_armors) {
       snapshot.armors = last_armors_;
     }
     snapshot.target_opt = last_target_opt_;
+
+    if (snapshot.has_armors || snapshot.target_opt.has_value()) {
+      snapshot.enemy = detectEnemy(snapshot.armors, snapshot.target_opt);
+    }
+    if (snapshot.enemy) {
+      snapshot.last_enemy_seen_ = now;
+    }
+    return snapshot;
   }
 
   bool EnvironmentContext::isStatusBad(const RobotStatus& rs) const {
     const int hp = static_cast<int>(rs.current_hp);
     const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
     return (hp < hp_enter_supply_) || (ammo <= ammo_min_);
-  }
-
-  bool EnvironmentContext::isStatusRecovered(const RobotStatus& rs) const {
-    const int hp = static_cast<int>(rs.current_hp);
-    const int ammo = static_cast<int>(rs.projectile_allowance_17mm);
-    return (hp >= hp_exit_supply_) && (ammo > ammo_min_);
   }
 
   void EnvironmentContext::setState(State s) {
