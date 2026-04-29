@@ -60,7 +60,11 @@ namespace decision_simple {
                      const std::optional<Target>& target_opt) const;
 
     void setState(State s);
+    bool isStateChanged();
+
     void setChassisMode(ChassisMode mode);
+
+    State state_{State::DEFAULT};
 
   private:
     mutable std::mutex mtx_;
@@ -76,12 +80,12 @@ namespace decision_simple {
     bool default_spin_latched_{false};
     bool is_game_started{false};
     bool is_game_over{false};
+    bool is_state_changed{false};
 
     int hp_enter_supply_{120};
     int hp_exit_supply_{300};
     int ammo_min_{0};
     double combat_max_distance_{8.0};
-    State state_{State::DEFAULT};
   };
 
 }  // namespace decision_simple

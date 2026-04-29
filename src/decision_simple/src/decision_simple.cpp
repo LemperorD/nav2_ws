@@ -249,7 +249,7 @@ namespace decision_simple {
         default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
     // ================= 1) 补给保持 =================
-    if (state_ == State::SUPPLY) {
+    if (environment_->state_ == State::SUPPLY) {
       if (!environment_->isStatusRecovered(snapshot.rs)) {
         publishChassisMode(ChassisMode::CHASSIS_FOLLOWED);
 
@@ -416,13 +416,12 @@ namespace decision_simple {
   }
 
   void DecisionSimple::setAndLogState(State s) {
-    if (state_ == s) {
-      return;
-    }
-    state_ = s;
+    environment_->setState(s);
 
-    RCLCPP_INFO(this->get_logger(), "State -> %u",
-                static_cast<unsigned>(state_));
+    if (environment_->isStateChanged()) {
+      RCLCPP_INFO(this->get_logger(), "State -> %u",
+                  static_cast<unsigned>(state_));
+    }
   }
 
   void DecisionSimple::publishChassisMode(ChassisMode mode) {

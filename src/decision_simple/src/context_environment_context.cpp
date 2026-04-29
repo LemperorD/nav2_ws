@@ -117,9 +117,15 @@ namespace decision_simple {
 
   void EnvironmentContext::setState(State s) {
     if (state_ == s) {
+      is_state_changed = false;
       return;
     }
+    is_state_changed = true;
     state_ = s;
+  }
+
+  bool EnvironmentContext::isStateChanged() {
+    return is_state_changed;
   }
 
 }  // namespace decision_simple
