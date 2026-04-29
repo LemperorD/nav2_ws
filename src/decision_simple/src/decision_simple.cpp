@@ -162,14 +162,12 @@ namespace decision_simple {
   void DecisionSimple::onRobotStatus(
       const pb_rm_interfaces::msg::RobotStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
-
     environment_->onRobotStatus(ConvertRobotStatus(msg));
   }
 
   void DecisionSimple::onGameStatus(
       const pb_rm_interfaces::msg::GameStatus::SharedPtr msg) {
     std::lock_guard<std::mutex> lk(mtx_);
-
     environment_->onGameStatus(ConvertGameStatus(msg),
                                this->now().nanoseconds());
 
@@ -203,13 +201,13 @@ namespace decision_simple {
 
     environment_->onTarget(ConvertTarget(msg));
   }
-  // ================= tick：决策 + 底盘模式切换 =================
+
   void DecisionSimple::tick() {
     // snapshot
+    double x, y, yaw;
     const auto now = this->now();
     Stamp stamp{static_cast<int32_t>(now.seconds()),
                 static_cast<uint32_t>(now.nanoseconds() % 1000000000UL)};
-
     auto readiness = environment_->checkReadiness(now.nanoseconds());
 
     if (readiness.status != Readiness::Status::READY) {
@@ -217,7 +215,6 @@ namespace decision_simple {
       return;
     }
 
-    double x, y, yaw;
     if (this->getRobotPoseMap(x, y, yaw)) {
       environment_->updatePose(x, y, yaw);
     }
@@ -228,7 +225,6 @@ namespace decision_simple {
     snapshot.in_center_keep_spin = environment_->isNear(
         default_x_, default_y_, default_spin_keep_xy_tol_);  // 确认是否在大圈
 
-    // Delegate to Decision class for complete tick decision logic
     auto action = controller_->computeAction(snapshot);
 
     // Apply action: update state and publish
@@ -236,25 +232,28 @@ namespace decision_simple {
     publishChassisMode(action.chassis_mode);
 
     if (action.should_publish_goal) {
-      const auto goal = makePoseXYZYaw(frame_id_, action.target_x,
-                                       action.target_y, action.target_yaw);
-
-      // For attack state, also publish debug pose
-      if (action.next_state == State::ATTACK) {
-        debug_attack_pose_pub_->publish(goal);
-      }
-
-      // Throttle based on state
-      if (action.next_state == State::SUPPLY) {
-        publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
-      } else if (action.next_state == State::ATTACK) {
-        publishGoalThrottled(goal, last_attack_pub_, attack_goal_hz_);
-      } else {
-        publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
-      }
+      publishGoal(action);
     }
   }
 
+  void DecisionSimple::publishGoal(const DecisionAction& action) {
+    const auto goal = makePoseXYZYaw(frame_id_, action.target_x,
+                                     action.target_y, action.target_yaw);
+
+    // For attack state, also publish debug pose
+    if (action.next_state == State::ATTACK) {
+      debug_attack_pose_pub_->publish(goal);
+    }
+
+    // Throttle based on state
+    if (action.next_state == State::SUPPLY) {
+      publishGoalThrottled(goal, last_supply_pub_, supply_goal_hz_);
+    } else if (action.next_state == State::ATTACK) {
+      publishGoalThrottled(goal, last_attack_pub_, attack_goal_hz_);
+    } else {
+      publishGoalThrottled(goal, last_default_pub_, default_goal_hz_);
+    }
+  }
   // ================= helpers =================
   geometry_msgs::msg::PoseStamped DecisionSimple::makePoseXYZYaw(
       const std::string& frame, double x, double y, double yaw) const {

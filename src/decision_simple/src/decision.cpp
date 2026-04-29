@@ -121,14 +121,15 @@ namespace decision_simple {
       action.target_yaw = default_yaw_;
 
       // Compute attack goal (modifies snapshot in-place)
-      buildAttackGoal(const_cast<Snapshot&>(snapshot), snapshot.armors, snapshot.target_opt);
-      
+      buildAttackGoal(const_cast<Snapshot&>(snapshot), snapshot.armors,
+                      snapshot.target_opt);
+
       if (snapshot.attacked_recent) {
         action.chassis_mode = ChassisMode::LITTLE_TES;
       } else {
         action.chassis_mode = ChassisMode::CHASSIS_FOLLOWED;
       }
-      
+
       // Use cached attack goal position if available
       if (snapshot.has_attack_goal) {
         action.target_x = snapshot.last_attack_position.x;

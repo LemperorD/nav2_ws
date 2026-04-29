@@ -45,6 +45,8 @@ namespace decision_simple {
     void handleGateLog(Readiness& readiness);
 
     // ====== chassis mode & arrival / attacked helpers ======
+    void publishGoal(const DecisionAction& action);
+
     bool getRobotPoseMap(double& x, double& y, double& yaw);
 
     void setAndLogState(State s);
