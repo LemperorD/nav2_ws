@@ -37,8 +37,6 @@ namespace decision_simple {
   DecisionSimple::DecisionSimple(const rclcpp::NodeOptions& options)
       : Node("decision_simple", options) {
     // ===== params =====
-    ContextConfig context_config;
-
     frame_id_ = this->declare_parameter<std::string>("frame_id", "map");
     base_frame_id_ = this->declare_parameter<std::string>("base_frame_id",
                                                           "base_footprint");
@@ -78,8 +76,7 @@ namespace decision_simple {
         "supply_arrive_xy_tol", 0.30);
 
     hp_enter_supply_ = this->declare_parameter<int>("hp_survival_enter", 120);
-    hp_exit_supply_ = hp_exit_supply_ = this->declare_parameter<int>(
-        "hp_survival_exit", 300);
+    hp_exit_supply_ = this->declare_parameter<int>("hp_survival_exit", 300);
     ammo_min_ = this->declare_parameter<int>("ammo_min", 0);
 
     combat_max_distance_ = this->declare_parameter<double>(
@@ -95,7 +92,10 @@ namespace decision_simple {
     supply_goal_hz_ = this->declare_parameter<double>("supply_goal_hz", 2.0);
     attack_goal_hz_ = this->declare_parameter<double>("attack_goal_hz", 10.0);
 
-    environment_ = std::make_unique<EnvironmentContext>();
+    const ContextConfig context_config{
+        hp_enter_supply_,     hp_exit_supply_,       ammo_min_,
+        combat_max_distance_, require_game_running_, start_delay_sec_};
+    environment_ = std::make_unique<EnvironmentContext>(context_config);
 
     // ===== TF init =====
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -196,42 +196,15 @@ namespace decision_simple {
   // ================= tick：决策 + 底盘模式切换 =================
   void DecisionSimple::tick() {
     // snapshot
+    const auto now = this->now();
 
     Snapshot snapshot;
-
+    auto readiness = environment_->checkReadiness(now.nanoseconds());
     environment_->tickForContext(snapshot);
 
-    if (!snapshot.has_rs) {
-      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                            "Waiting for robot_status...");
+    if (readiness.status != Readiness::Status::READY) {
+      handleGateLog(readiness);
       return;
-    }
-
-    const auto now = this->now();
-    // 比赛开始延时
-    if (require_game_running_) {
-      if (!snapshot.has_gs) {
-        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                              "Waiting for game_status...");
-        return;
-      }
-
-      if (!snapshot.match_started) {
-        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                              "Waiting for match start (game_status == 4)...");
-        return;
-      }
-
-      const nanoseconds match_start_ns =
-          static_cast<nanoseconds>(snapshot.match_start_time.sec) * 1000000000LL
-          + snapshot.match_start_time.nanosec;
-      const double elapsed = (now.nanoseconds() - match_start_ns) * 1e-9;
-      if (elapsed < start_delay_sec_) {
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                             "Match started, delaying decision: %.1f / %.1f s",
-                             elapsed, start_delay_sec_);
-        return;
-      }
     }
 
     // 受到攻击检测
@@ -441,6 +414,12 @@ namespace decision_simple {
       goal_pose_pub_->publish(goal);
     }
   }
+
+  void DecisionSimple::handleGateLog(Readiness& readiness) {
+    (void)readiness;
+    return;
+  }
+
 }  // namespace decision_simple
 
 // namespace decision_simple

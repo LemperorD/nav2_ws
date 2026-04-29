@@ -45,6 +45,7 @@ namespace decision_simple {
 
     bool buildSupplyGoal(geometry_msgs::msg::PoseStamped& out,
                          const RobotStatus& status) const;
+    void handleGateLog(Readiness& readiness);
 
     // ====== chassis mode & arrival / attacked helpers ======
     bool getRobotPoseMap(double& x, double& y, double& yaw);

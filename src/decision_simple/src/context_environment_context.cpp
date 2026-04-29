@@ -1,9 +1,14 @@
 #include "decision_simple/core/environment_context.hpp"
 
 namespace decision_simple {
+
   EnvironmentContext::EnvironmentContext(const ContextConfig& context_config)
       : hp_enter_supply_(context_config.hp_enter_supply),
-        ammo_min_((context_config.ammo_min)) {
+        hp_exit_supply_(context_config.hp_exit_supply),
+        ammo_min_(context_config.ammo_min),
+        combat_max_distance_(context_config.combat_max_distance),
+        require_game_running_(context_config.require_game_running),
+        start_delay_sec_(context_config.start_delay_sec) {
   }
 
   void EnvironmentContext::onRobotStatus(const RobotStatus& robot_status) {
@@ -126,6 +131,27 @@ namespace decision_simple {
 
   bool EnvironmentContext::isStateChanged() {
     return is_state_changed;
+  }
+
+  Readiness EnvironmentContext::checkReadiness(nanoseconds now) {
+    if (!has_robot_status_) {
+      return {Readiness::Status::NO_RS};
+    }
+    if (require_game_running_) {
+      if (!has_game_status_) {
+        return {Readiness::Status::NO_GS};
+      }
+      if (!match_started_) {
+        return {Readiness::Status::NOT_STARTED};
+      }
+
+      const double current_elapsed = (now - match_start_time_) * 1e-9;
+      if (current_elapsed < start_delay_sec_) {
+        return {Readiness::Status::IN_DELAY, current_elapsed};
+      }
+    }
+
+    return {Readiness::Status::READY};
   }
 
 }  // namespace decision_simple

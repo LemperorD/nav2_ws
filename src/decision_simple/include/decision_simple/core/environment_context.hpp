@@ -19,11 +19,20 @@
 #include "types.hpp"
 
 namespace decision_simple {
+  using nanoseconds = int64_t;
   struct ContextConfig {
-    int hp_enter_supply;
-    int hp_exit_supply;
-    int ammo_min;
-    // ... 其他参数
+    int hp_enter_supply{120};
+    int hp_exit_supply{300};
+    int ammo_min{0};
+    double combat_max_distance{8.0};
+    bool require_game_running{false};
+    double start_delay_sec{5.0};
+  };
+
+  struct Readiness {
+    enum class Status { READY, NO_RS, NO_GS, NOT_STARTED, IN_DELAY };
+    Status status;
+    double elapsed = 0.0;  // 仅供 Log 使用
   };
   /// Environment state aggregation layer
   /// Translates low-level ROS messages into high-level business facts
@@ -63,13 +72,14 @@ namespace decision_simple {
     bool isStateChanged();
 
     void setChassisMode(ChassisMode mode);
+    Readiness checkReadiness(int64_t now);
 
     State state_{State::DEFAULT};
 
   private:
     mutable std::mutex mtx_;
     bool has_robot_status_{false};
-    bool match_started_;
+    bool match_started_{false};
     RobotStatus last_robot_status_{};
     bool has_game_status_{false};
     int64_t match_start_time_{};
@@ -81,11 +91,12 @@ namespace decision_simple {
     bool is_game_started{false};
     bool is_game_over{false};
     bool is_state_changed{false};
-
     int hp_enter_supply_{120};
     int hp_exit_supply_{300};
     int ammo_min_{0};
     double combat_max_distance_{8.0};
+    bool require_game_running_{false};
+    double start_delay_sec_{5.0};
   };
 
 }  // namespace decision_simple
