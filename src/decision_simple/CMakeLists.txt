@@ -16,18 +16,16 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(pb_rm_interfaces REQUIRED)
-
-# auto_aim_interfaces 可选
-find_package(auto_aim_interfaces QUIET)
-if(auto_aim_interfaces_FOUND)
-  add_compile_definitions(DECISION_SIMPLE_HAS_AUTO_AIM)
-endif()
+find_package(auto_aim_interfaces REQUIRED)
 
 include_directories(include)
 
 # ===== Component library =====
 add_library(decision_simple_component SHARED
   src/decision_simple.cpp
+  src/decision.cpp
+  src/transform.cpp
+  src/context_environment_context.cpp
 )
 
 ament_target_dependencies(decision_simple_component
@@ -40,11 +38,8 @@ ament_target_dependencies(decision_simple_component
   tf2_geometry_msgs
   nav2_msgs
   pb_rm_interfaces
+  auto_aim_interfaces
 )
-
-if(auto_aim_interfaces_FOUND)
-  ament_target_dependencies(decision_simple_component auto_aim_interfaces)
-endif()
 
 # Register component plugin
 rclcpp_components_register_nodes(decision_simple_component "decision_simple::DecisionSimple")
@@ -79,10 +74,8 @@ if(BUILD_TESTING)
       tf2_geometry_msgs
       nav2_msgs
       pb_rm_interfaces
+      auto_aim_interfaces
     )
-    if(auto_aim_interfaces_FOUND)
-      ament_target_dependencies(test_general auto_aim_interfaces)
-    endif()
   endif()
 endif()
 
